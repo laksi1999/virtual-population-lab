@@ -6,7 +6,6 @@ A framework for generating and comparing synthetic populations from real tabular
 
 Given a real dataset, this project generates several synthetic populations — one per engine — and evaluates which one best preserves the real population's feature distributions, correlations, and uncertainty. It's dataset-agnostic: everything specific to a dataset (which columns are features, what causal relationships to assume, whether the data is already scaled) lives in one config module, so pointing the pipeline at a new dataset means writing a new config, not touching the modeling code.
 
-Three public datasets are configured so far — apple quality, mango ripeness, and banana quality (see below) — but nothing in `src/generators` or `src/evaluation` assumes it's about any particular fruit, or even about food.
 
 ## The three engines
 
