@@ -1,0 +1,99 @@
+"""
+Every config field, documented once. A dataset config does
+`from src.configs.base import *` and overrides whatever it needs — fields
+below with empty/placeholder values (DATA_PATH, FEATURES, etc.) MUST be
+overridden per dataset; the rest have sensible defaults and only need
+overriding when tuning calls for it. This keeps documentation in one
+place instead of repeated across every dataset config file.
+"""
+
+# --- Dataset-specific — must be overridden, these have no sensible default ---
+
+# Path to the source CSV, relative to the project root.
+DATA_PATH = ""
+
+# Link to where the dataset came from — included in the auto-generated
+# report so provenance travels with the results.
+DATA_SOURCE_URL = ""
+
+# Non-feature columns to drop before modeling (e.g. row IDs).
+ID_COLUMNS = []
+
+# Categorical/target column kept for reference but excluded from generation
+# (the generators here only model continuous features).
+LABEL_COLUMN = ""
+
+# The continuous columns every generator models.
+FEATURES = []
+
+# Root variables for the physics-informed Monte Carlo generator: no parent
+# in the causal graph, sampled directly from their own real marginal
+# distribution.
+ROOT_VARIABLES = []
+
+# Assumed causal chain: each (parent, child) edge means `child` is generated
+# from parent's fitted linear relationship plus calibrated residual noise.
+# This is the one piece of real domain knowledge in the pipeline. Every
+# parent must appear in ROOT_VARIABLES or as a child earlier in this list.
+CAUSAL_GRAPH = []
+
+# Whether FEATURES in the source CSV are already standardized (mean 0,
+# std 1). If True, main.py feeds the VAE raw values as-is and skips
+# inverse-transforming its output (there's no original unscaled space to
+# return to). If False, main.py fits its own StandardScaler for the VAE
+# and inverse-transforms generated samples back to the source units.
+IS_PRE_SCALED = False
+
+# --- Pipeline mechanics — sensible defaults, override only if tuning calls for it ---
+
+# Fraction of the data held out as "real" individuals for evaluation and as
+# the base rows the regression generator conditions on (never used for fitting).
+TEST_SIZE = 0.3
+
+# How many synthetic rows each generator produces, independent of dataset size.
+N_SAMPLES = 1000
+
+RANDOM_SEED = 42
+
+# VAE latent dimensionality — a reasonable starting point; tune per dataset
+# if the causal structure has more independent noise sources than this.
+LATENT_DIM = 4
+
+# VAE training epochs and final KL weight (beta) — beta is linearly annealed
+# up to this value over training (see vae_generator.generate) to avoid
+# posterior collapse. Training stops early if the loss hasn't improved for
+# VAE_PATIENCE epochs (checked only after KL warmup finishes), so VAE_EPOCHS
+# can be set as a generous upper bound rather than hand-tuned per run.
+VAE_EPOCHS = 2000
+VAE_BETA = 1.0
+VAE_PATIENCE = 400
+
+# Hidden layer width for the VAE's encoder/decoder, and dropout probability
+# inside them (0.0 disables dropout). The default width is tuned for
+# apple_quality's 2800 rows; on a much smaller dataset that many parameters
+# can memorize training noise instead of generalizing — shrink VAE_HIDDEN_DIM
+# and/or add VAE_DROPOUT if the generalization check shows a large train/test
+# gap (see vae_generator.generate).
+VAE_HIDDEN_DIM = 128
+VAE_DROPOUT = 0.0
+
+# Floor on KL cost per latent dimension (in nats) — 0.0 disables it (a valid
+# per-dim KL is already >= 0, so a zero floor is a no-op). Watch for the
+# posterior-collapse signature after a run: recon_loss plateauing at ~1.0 on
+# standardized data (no better than always predicting the mean) with KL
+# near zero. If that happens, try 0.5-2.0 rather than presetting this
+# defensively — an unneeded floor just wastes model capacity.
+VAE_FREE_BITS = 0.0
+
+# Weight on the covariance-matching loss term: penalizes the squared
+# difference between the reconstructed batch's covariance matrix and the
+# real batch's. Gives the model direct pressure toward preserving feature
+# correlations, which the reconstruction+KL ELBO alone doesn't reward.
+VAE_COV_WEIGHT = 1.0
+
+# Whether to train in shuffled mini-batches (adds stochastic noise to escape
+# flat/plateaued loss regions) vs. one full-batch gradient step per epoch.
+# Disable for very small datasets where mini-batches would just add noise
+# without enough data per batch to estimate a stable gradient.
+VAE_USE_MINIBATCH = False
+VAE_BATCH_SIZE = 128
