@@ -13,7 +13,12 @@ from sklearn.preprocessing import StandardScaler
 from src.config_loader import DEFAULT_CONFIG, load_config
 from src.data_loading import load_data
 from src.evaluation.evaluate import display_name, generalization_gap, metric_display_name, run_evaluation
-from src.generators import physics_mc_generator, regression_generator, vae_generator
+from src.generators import (
+    hybrid_vae_generator,
+    physics_mc_generator,
+    regression_generator,
+    vae_generator,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger("vp-lab")
@@ -286,7 +291,7 @@ def main():
 
     log.info("Running regression generator...")
     regression_generated = regression_generator.generate(
-        train_df, test_df, config.FEATURES,
+        train_df, config.FEATURES,
         n_samples=config.N_SAMPLES,
     )
     log.info("Regression: generated %d rows", len(regression_generated))
@@ -317,10 +322,36 @@ def main():
     )
     log.info("VAE: generated %d rows", len(vae_generated))
 
+    log.info("Training hybrid physics-informed VAE generator...")
+    hybrid_vae_generated = hybrid_vae_generator.generate(
+        vae_input,
+        config.FEATURES,
+        config.CAUSAL_GRAPH,
+        latent_dim=config.LATENT_DIM,
+        epochs=config.VAE_EPOCHS,
+        beta=config.VAE_BETA,
+        n_samples=config.N_SAMPLES,
+        scaler=vae_scaler,
+        use_minibatch=config.VAE_USE_MINIBATCH,
+        batch_size=config.VAE_BATCH_SIZE,
+        cov_weight=config.VAE_COV_WEIGHT,
+        physics_weight=config.VAE_PHYSICS_WEIGHT,
+        marginal_weight=config.VAE_MARGINAL_WEIGHT,
+        prior_type=config.VAE_PRIOR_TYPE,
+        constrain_generated=config.VAE_CONSTRAIN_GENERATED,
+        calibrate_marginals=config.VAE_CALIBRATE_MARGINALS,
+        patience=config.VAE_PATIENCE,
+        hidden_dim=config.VAE_HIDDEN_DIM,
+        dropout=config.VAE_DROPOUT,
+        free_bits=config.VAE_FREE_BITS,
+    )
+    log.info("Hybrid physics-informed VAE: generated %d rows", len(hybrid_vae_generated))
+
     engines = {
         "physics_mc": (physics_mc_generator, physics_mc_generated),
         "regression": (regression_generator, regression_generated),
         "vae": (vae_generator, vae_generated),
+        "hybrid_vae": (hybrid_vae_generator, hybrid_vae_generated),
     }
     generated = {key: gen_df for key, (_, gen_df) in engines.items()}
 

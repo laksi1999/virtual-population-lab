@@ -35,6 +35,7 @@ DISPLAY_NAMES = {
     "physics_mc": "Physics-Informed Monte Carlo",
     "regression": "Regression",
     "vae": "Variational Autoencoder",
+    "hybrid_vae": "Physics-Informed VAE (Hybrid)",
 }
 
 
