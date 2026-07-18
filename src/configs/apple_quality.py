@@ -36,9 +36,11 @@ CAUSAL_GRAPH = [
 
 IS_PRE_SCALED = True
 
-# Tuned overrides — the causal chain has 7 independent noise sources (2 root
-# Gaussians + 5 residual terms), so base.py's default 4-dim latent bottleneck
-# compressed harder than this data needed. See README's "A note on tuning
-# the VAE" for the full story.
-LATENT_DIM = 6
+# The causal chain has 7 independent noise sources (2 root Gaussians + 5
+# residual terms), so base.py's default 4-dim latent under-fits this data.
+LATENT_DIM = 7
 VAE_EPOCHS = 4000
+
+# Hybrid physics-informed VAE — marginal-matching weight, at the knee where
+# marginal fit and spread saturate while joint structure stays best-in-class.
+VAE_MARGINAL_WEIGHT = 2.0

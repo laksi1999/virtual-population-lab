@@ -35,6 +35,8 @@ DISPLAY_NAMES = {
     "physics_mc": "Physics-Informed Monte Carlo",
     "regression": "Regression",
     "vae": "Variational Autoencoder",
+    "hybrid_vae": "Physics-Informed VAE (Hybrid)",
+    "hybrid_vae_raw": "Physics-Informed VAE (uncalibrated)",
 }
 
 
@@ -217,9 +219,10 @@ def save_ks_heatmap(ks_table, path):
     plt.title("KS Statistic by Feature and Method\n(lower = generated marginal closer to real)", fontsize=12)
     plt.xlabel("")
     plt.ylabel("")
-    plt.xticks(rotation=0)
+    plt.xticks(rotation=30, ha="right")
+    plt.yticks(rotation=0)
     plt.tight_layout()
-    plt.savefig(path, dpi=FIGURE_DPI)
+    plt.savefig(path, dpi=FIGURE_DPI, bbox_inches="tight")
     plt.close()
 
 
@@ -284,9 +287,10 @@ def save_pvalue_heatmap(ks_table, path):
                "(darker = more statistically significant difference from real)", fontsize=12)
     plt.xlabel("")
     plt.ylabel("")
-    plt.xticks(rotation=0)
+    plt.xticks(rotation=30, ha="right")
+    plt.yticks(rotation=0)
     plt.tight_layout()
-    plt.savefig(path, dpi=FIGURE_DPI)
+    plt.savefig(path, dpi=FIGURE_DPI, bbox_inches="tight")
     plt.close()
 
 
@@ -324,9 +328,15 @@ def correlation_euclidean_dist(real_df, fake_df, features):
     per-cell differences). Not an average — comparable across methods on
     this dataset (same matrix size), but not across datasets with a
     different feature count.
+
+    Any correlation cell that is undefined — a feature with zero variance in
+    either population (a constant column) has NaN correlations — is treated as
+    0 (no linear relationship). Without this, a single degenerate/collapsed
+    feature (e.g. within a small held-out subgroup, or from a mode-collapsed
+    generator) would make the whole distance NaN.
     """
-    real_corr = real_df[features].corr().values.flatten()
-    fake_corr = fake_df[features].corr().values.flatten()
+    real_corr = np.nan_to_num(real_df[features].corr().values.flatten())
+    fake_corr = np.nan_to_num(fake_df[features].corr().values.flatten())
 
     return euclidean(real_corr, fake_corr)
 
