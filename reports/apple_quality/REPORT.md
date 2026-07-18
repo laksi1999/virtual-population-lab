@@ -1,6 +1,6 @@
 # Virtual Population Lab — Report
 
-_Auto-generated on 2026-07-15 15:06 from `apple_quality`. Re-run `make run CONFIG=apple_quality` to refresh._
+_Auto-generated on 2026-07-18 21:51 from `apple_quality`. Re-run `make run CONFIG=apple_quality` to refresh._
 
 ## Objective
 
@@ -179,23 +179,23 @@ constraint doesn't change any of them.
 
 | Engine | Correlation Distance (Euclidean) | Mean KS Statistic |
 |---|---|---|
-| Physics-Informed Monte Carlo | 0.9558 | 0.0319 |
-| Regression | 0.6848 | 0.0378 |
-| Variational Autoencoder | 0.7725 | 0.0825 |
-| Physics-Informed VAE (Hybrid) | **0.4721** | **0.0219** |
+| Physics-Informed Monte Carlo | 0.9434 | 0.0467 |
+| Regression | 0.6763 | 0.0366 |
+| Variational Autoencoder | 0.8392 | 0.0774 |
+| Physics-Informed VAE (Hybrid) | **0.4935** | **0.0237** |
 
 (Lower is better for both metrics; bold = best.)
 
 ## Findings
 
-- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.4721)
-- Best **Mean KS Statistic**: Physics-Informed VAE (Hybrid) (0.0219)
+- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.4935)
+- Best **Mean KS Statistic**: Physics-Informed VAE (Hybrid) (0.0237)
 
 Per-feature marginal fit (two-sample KS test, real vs. generated; lower ks_stat / higher p_value = closer):
 
-- **Physics-Informed Monte Carlo**: 0/7 features statistically distinguishable from real (p < 0.05)
+- **Physics-Informed Monte Carlo**: 2/7 features statistically distinguishable from real (p < 0.05)
 - **Regression**: 0/7 features statistically distinguishable from real (p < 0.05)
-- **Variational Autoencoder**: 5/7 features statistically distinguishable from real (p < 0.05)
+- **Variational Autoencoder**: 7/7 features statistically distinguishable from real (p < 0.05)
 - **Physics-Informed VAE (Hybrid)**: 0/7 features statistically distinguishable from real (p < 0.05)
 
 ## Per-Feature KS Statistic
@@ -204,13 +204,13 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|
-| Size | 0.0267 | 0.0373 | 0.0723 | **0.0178** |
-| Weight | **0.0267** | 0.0445 | 0.0903 | 0.0270 |
-| Sweetness | 0.0352 | 0.0265 | 0.0615 | **0.0187** |
-| Crunchiness | 0.0330 | 0.0377 | 0.1415 | **0.0140** |
-| Juiciness | 0.0397 | 0.0383 | 0.1082 | **0.0287** |
-| Ripeness | 0.0258 | 0.0407 | 0.0530 | **0.0240** |
-| Acidity | 0.0365 | 0.0393 | 0.0503 | **0.0233** |
+| Size | 0.0458 | 0.0377 | 0.0808 | **0.0223** |
+| Weight | 0.0715 | **0.0307** | 0.0862 | 0.0330 |
+| Sweetness | 0.0610 | 0.0337 | 0.0628 | **0.0278** |
+| Crunchiness | 0.0562 | 0.0283 | 0.1245 | **0.0245** |
+| Juiciness | 0.0298 | 0.0330 | 0.0688 | **0.0217** |
+| Ripeness | 0.0240 | 0.0532 | 0.0602 | **0.0222** |
+| Acidity | 0.0387 | 0.0400 | 0.0583 | **0.0147** |
 
 ## Feature Spread Comparison
 
@@ -218,13 +218,13 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Real Std | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|---|
-| Size | 1.933 | 1.886 (0.98x) | 1.877 (0.97x) | 1.630 (0.84x) | 1.923 (0.99x) |
-| Weight | 1.609 | 1.567 (0.97x) | 1.570 (0.98x) | 1.248 (0.78x) | 1.596 (0.99x) |
-| Sweetness | 1.923 | 2.029 (1.06x) | 1.908 (0.99x) | 1.725 (0.90x) | 1.949 (1.01x) |
-| Crunchiness | 1.420 | 1.390 (0.98x) | 1.305 (0.92x) | 0.846 (0.60x) | 1.391 (0.98x) |
-| Juiciness | 1.891 | 1.960 (1.04x) | 1.903 (1.01x) | 1.567 (0.83x) | 1.943 (1.03x) |
-| Ripeness | 1.872 | 1.871 (1.00x) | 1.811 (0.97x) | 1.604 (0.86x) | 1.872 (1.00x) |
-| Acidity | 2.128 | 2.153 (1.01x) | 2.101 (0.99x) | 1.895 (0.89x) | 2.099 (0.99x) |
+| Size | 1.927 | 2.007 (1.04x) | 1.956 (1.02x) | 1.543 (0.80x) | 1.926 (1.00x) |
+| Weight | 1.600 | 1.618 (1.01x) | 1.556 (0.97x) | 1.188 (0.74x) | 1.600 (1.00x) |
+| Sweetness | 1.954 | 1.944 (0.99x) | 1.859 (0.95x) | 1.691 (0.87x) | 1.935 (0.99x) |
+| Crunchiness | 1.411 | 1.393 (0.99x) | 1.351 (0.96x) | 0.885 (0.63x) | 1.396 (0.99x) |
+| Juiciness | 1.898 | 1.922 (1.01x) | 1.951 (1.03x) | 1.633 (0.86x) | 1.941 (1.02x) |
+| Ripeness | 1.883 | 1.859 (0.99x) | 1.750 (0.93x) | 1.587 (0.84x) | 1.868 (0.99x) |
+| Acidity | 2.117 | 2.157 (1.02x) | 2.014 (0.95x) | 1.772 (0.84x) | 2.104 (0.99x) |
 
 ## Generalization Check
 
@@ -232,10 +232,39 @@ Correlation distance for each engine's synthetic data against the train split it
 
 | Engine | Correlation Dist. (vs. Train) | Correlation Dist. (vs. Test) | Gap |
 |---|---|---|---|
-| Physics-Informed Monte Carlo | 0.9452 | 0.9558 | 0.0106 |
-| Regression | 0.6498 | 0.6848 | 0.0350 |
-| Variational Autoencoder | 0.7561 | 0.7725 | 0.0164 |
-| Physics-Informed VAE (Hybrid) | 0.4104 | 0.4721 | 0.0617 |
+| Physics-Informed Monte Carlo | 0.9142 | 0.9434 | 0.0292 |
+| Regression | 0.6510 | 0.6763 | 0.0253 |
+| Variational Autoencoder | 0.7821 | 0.8392 | 0.0571 |
+| Physics-Informed VAE (Hybrid) | 0.3873 | 0.4935 | 0.1063 |
+
+## Downstream Utility (TSTR)
+
+Train-on-Synthetic, Test-on-Real for the `Quality` label: a RandomForest is trained on each engine's synthetic population (labels produced by generating each class separately) and scored on the real held-out test set. **Real (TRTR)** — a classifier trained on real data — is the ceiling; the closer an engine gets to it, the more genuinely useful its synthetic population is. This rewards preserving the feature-label joint structure, not just the marginals.
+
+| Trained on | Accuracy | ROC-AUC |
+|---|---|---|
+| **Real (TRTR ceiling)** | 0.8858 | 0.9600 |
+| Physics-Informed Monte Carlo | 0.7850 | 0.8615 |
+| Regression | 0.8283 | 0.9067 |
+| Variational Autoencoder | 0.7950 | 0.8866 |
+| Physics-Informed VAE (Hybrid) | 0.8667 | 0.9406 |
+
+(Higher is better; closer to the Real ceiling = more useful synthetic data.)
+
+## Uncertainty Calibration (Coverage)
+
+Tests the *calibrated uncertainty* claim directly. For each feature, the central 90% interval of each engine's generated population is formed, and we measure the fraction of real held-out values that fall inside it (averaged over features). Well-calibrated ⇒ coverage ≈ the nominal 0.90; **below** = over-confident (intervals too narrow), **above** = intervals too wide. `calibration_error` is the mean absolute gap between empirical and nominal coverage across interval levels from 0.10 to 0.95 (lower = better calibrated across the whole range).
+
+| Engine | Coverage @ 90% (nominal 0.90) | Calibration Error |
+|---|---|---|
+| Physics-Informed Monte Carlo | 0.904 | 0.0132 |
+| Regression | 0.885 | 0.0208 |
+| Variational Autoencoder | 0.815 | 0.0835 |
+| Physics-Informed VAE (Hybrid) | 0.901 | **0.0098** |
+
+(Coverage closest to nominal and lowest calibration error = best-calibrated uncertainty.)
+
+![Uncertainty calibration reliability curve](../../results/apple_quality/figures/marginals/coverage_calibration.png)
 
 ## Figures
 

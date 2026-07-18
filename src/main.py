@@ -6,19 +6,107 @@ import sys
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from src.config_loader import DEFAULT_CONFIG, load_config
 from src.data_loading import load_data
+from src.evaluation.coverage import HEADLINE_LEVEL, coverage_metrics, save_calibration_plot
 from src.evaluation.evaluate import display_name, generalization_gap, metric_display_name, run_evaluation
+from src.evaluation.tstr import run_tstr
 from src.generators import (
     hybrid_vae_generator,
     physics_mc_generator,
     regression_generator,
     vae_generator,
 )
+
+# Engine key -> its generator module, in the order they appear everywhere
+# (summary table, report, figures). The module is used for the report's
+# methodology section (pulled from each generate() docstring).
+ENGINE_MODULES = {
+    "physics_mc": physics_mc_generator,
+    "regression": regression_generator,
+    "vae": vae_generator,
+    "hybrid_vae": hybrid_vae_generator,
+    # Optional uncalibrated hybrid ablation (only present when a config sets
+    # VAE_REPORT_UNCALIBRATED); shares the hybrid module for methodology text.
+    "hybrid_vae_raw": hybrid_vae_generator,
+}
+
+
+def generate_population(source_df, config, scaler, n_samples=None, quiet=False):
+    """
+    Generate one synthetic population per engine from `source_df`, returning
+    {engine_key: DataFrame}. Used both for the main run (source = full train)
+    and for TSTR (source = one label class at a time), so the two paths can't
+    drift. `scaler` is fit once on the full train and shared, so per-class
+    generation stays in the same feature space; None when the data is already
+    scaled. `quiet` silences per-engine/epoch logging for the many-call TSTR
+    path.
+    """
+    n_samples = config.N_SAMPLES if n_samples is None else n_samples
+    fx = config.FEATURES
+    vae_input = source_df[fx].values if scaler is None else scaler.transform(source_df[fx])
+
+    gen_log = logging.getLogger("vp-lab")
+    prev_level = gen_log.level
+    if quiet:
+        gen_log.setLevel(logging.WARNING)
+    # Shared hybrid kwargs (calibrate_marginals passed per-call below so the
+    # uncalibrated ablation can toggle only that one flag).
+    hybrid_kwargs = dict(
+        latent_dim=config.LATENT_DIM, epochs=config.VAE_EPOCHS, beta=config.VAE_BETA,
+        n_samples=n_samples, scaler=scaler,
+        use_minibatch=config.VAE_USE_MINIBATCH, batch_size=config.VAE_BATCH_SIZE,
+        cov_weight=config.VAE_COV_WEIGHT, physics_weight=config.VAE_PHYSICS_WEIGHT,
+        marginal_weight=config.VAE_MARGINAL_WEIGHT, prior_type=config.VAE_PRIOR_TYPE,
+        constrain_generated=config.VAE_CONSTRAIN_GENERATED,
+        patience=config.VAE_PATIENCE, hidden_dim=config.VAE_HIDDEN_DIM,
+        dropout=config.VAE_DROPOUT, free_bits=config.VAE_FREE_BITS,
+    )
+    # Report the uncalibrated hybrid alongside the calibrated one only in the
+    # main (verbose) run, and only when calibration is actually on. Seed both
+    # hybrid trainings identically so the two rows differ *only* by the
+    # calibration post-step — a clean ablation of the KS-vs-correlation trade.
+    report_raw = (
+        config.VAE_CALIBRATE_MARGINALS
+        and getattr(config, "VAE_REPORT_UNCALIBRATED", False)
+        and not quiet
+    )
+    try:
+        out = {
+            "physics_mc": physics_mc_generator.generate(
+                source_df, fx, config.CAUSAL_GRAPH, config.ROOT_VARIABLES, n_samples=n_samples,
+            ),
+            "regression": regression_generator.generate(source_df, fx, n_samples=n_samples),
+            "vae": vae_generator.generate(
+                vae_input, fx,
+                latent_dim=config.LATENT_DIM, epochs=config.VAE_EPOCHS, beta=config.VAE_BETA,
+                n_samples=n_samples, scaler=scaler,
+                use_minibatch=config.VAE_USE_MINIBATCH, batch_size=config.VAE_BATCH_SIZE,
+                cov_weight=config.VAE_COV_WEIGHT, patience=config.VAE_PATIENCE,
+                hidden_dim=config.VAE_HIDDEN_DIM, dropout=config.VAE_DROPOUT,
+                free_bits=config.VAE_FREE_BITS,
+            ),
+        }
+        if report_raw:
+            torch.manual_seed(config.RANDOM_SEED)
+        out["hybrid_vae"] = hybrid_vae_generator.generate(
+            vae_input, fx, config.CAUSAL_GRAPH,
+            calibrate_marginals=config.VAE_CALIBRATE_MARGINALS, **hybrid_kwargs,
+        )
+        if report_raw:
+            torch.manual_seed(config.RANDOM_SEED)
+            out["hybrid_vae_raw"] = hybrid_vae_generator.generate(
+                vae_input, fx, config.CAUSAL_GRAPH,
+                calibrate_marginals=False, **hybrid_kwargs,
+            )
+    finally:
+        gen_log.setLevel(prev_level)
+    return out
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger("vp-lab")
@@ -89,7 +177,8 @@ def print_summary(summary):
     print("* = best (lowest) for that metric")
 
 
-def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, engines):
+def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, engines,
+                 tstr_df=None, coverage_df=None):
     """
     Rewrites reports/REPORT.md from this run's actual data and outputs.
     `engines`: dict of {key: (module, generated_df)} — methodology text comes
@@ -126,7 +215,11 @@ def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, en
         "",
     ]
 
+    seen_modules = set()
     for key, (module, _) in engines.items():
+        if module in seen_modules:  # e.g. hybrid_vae_raw shares the hybrid module
+            continue
+        seen_modules.add(module)
         doc = inspect.getdoc(module.generate) or ""
         lines += [f"**{display_name(key)}** (`{module.__name__}.generate`)", "", doc, ""]
 
@@ -217,9 +310,98 @@ def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, en
             f"{row['test_correlation_dist']:.4f} | {row['gap']:.4f} |"
         )
 
+    if tstr_df is not None:
+        lines += [
+            "",
+            "## Downstream Utility (TSTR)",
+            "",
+            f"Train-on-Synthetic, Test-on-Real for the `{config.LABEL_COLUMN}` label: a "
+            "RandomForest is trained on each engine's synthetic population (labels produced by "
+            "generating each class separately) and scored on the real held-out test set. "
+            "**Real (TRTR)** — a classifier trained on real data — is the ceiling; the closer an "
+            "engine gets to it, the more genuinely useful its synthetic population is. This "
+            "rewards preserving the feature-label joint structure, not just the marginals.",
+            "",
+            "| Trained on | Accuracy | ROC-AUC |",
+            "|---|---|---|",
+        ]
+        for _, row in tstr_df.iterrows():
+            label = "**Real (TRTR ceiling)**" if row["method"] == "real" else display_name(row["method"])
+            auc = "n/a" if pd.isna(row["roc_auc"]) else f"{row['roc_auc']:.4f}"
+            lines.append(f"| {label} | {row['accuracy']:.4f} | {auc} |")
+        lines.append("")
+        lines.append("(Higher is better; closer to the Real ceiling = more useful synthetic data.)")
+
+    if coverage_df is not None:
+        lines += [
+            "",
+            "## Uncertainty Calibration (Coverage)",
+            "",
+            f"Tests the *calibrated uncertainty* claim directly. For each feature, the central "
+            f"{int(HEADLINE_LEVEL * 100)}% interval of each engine's generated population is formed, "
+            "and we measure the fraction of real held-out values that fall inside it (averaged over "
+            f"features). Well-calibrated ⇒ coverage ≈ the nominal {HEADLINE_LEVEL:.2f}; **below** = "
+            "over-confident (intervals too narrow), **above** = intervals too wide. `calibration_error` "
+            "is the mean absolute gap between empirical and nominal coverage across interval levels "
+            "from 0.10 to 0.95 (lower = better calibrated across the whole range).",
+            "",
+            f"| Engine | Coverage @ {int(HEADLINE_LEVEL * 100)}% (nominal {HEADLINE_LEVEL:.2f}) | Calibration Error |",
+            "|---|---|---|",
+        ]
+        best_cal = coverage_df["calibration_error"].min()
+        for _, row in coverage_df.iterrows():
+            cal = f"{row['calibration_error']:.4f}"
+            cal = f"**{cal}**" if row["calibration_error"] == best_cal else cal
+            lines.append(f"| {display_name(row['method'])} | {row['coverage_at_90']:.3f} | {cal} |")
+        lines += [
+            "",
+            "(Coverage closest to nominal and lowest calibration error = best-calibrated uncertainty.)",
+            "",
+            f"![Uncertainty calibration reliability curve]"
+            f"(../../{RESULTS_DIR}/figures/marginals/coverage_calibration.png)",
+        ]
+
     # REPORT.md lives at reports/<config>/REPORT.md, two directories deep,
     # so figures under results/<config>/... need ../../ to get back to root.
     rel_results = f"../../{RESULTS_DIR}"
+
+    # Near/far transfer — pulled from a prior `make loro` run if one exists (LORO
+    # runs separately and far heavier, so its results may or may not be present).
+    loro_path = f"{RESULTS_DIR}/loro.csv"
+    if getattr(config, "LORO_GROUP", "") and os.path.exists(loro_path):
+        lo = pd.read_csv(loro_path)
+        if not lo.empty:
+            lines += [
+                "",
+                "## Support-Aware Uncertainty (Near/Far Transfer)",
+                "",
+                f"Same-model transfer over `{config.LORO_GROUP}`: one conditional-VAE ensemble is "
+                "trained per region, then queried for the **held-out same region (NEAR)** vs a "
+                "**different region (FAR)**. A model that 'knows what it doesn't know' has ensemble "
+                "**disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and "
+                "coverage degrade. (From the latest `make loro` run.)",
+                "",
+                "| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | corr FAR / NEAR |",
+                "|---|---|---|---|",
+            ]
+            for _, r in lo.iterrows():
+                g = "**MEAN**" if r["group"] == "MEAN" else str(r["group"])
+                lines.append(
+                    f"| {g} | {r['disagreement_far']:.4f} / {r['disagreement_near']:.4f} | "
+                    f"{r['coverage_far']:.3f} / {r['coverage_near']:.3f} | "
+                    f"{r['corr_far']:.3f} / {r['corr_near']:.3f} |"
+                )
+            mrow = lo[lo["group"] == "MEAN"]
+            if not mrow.empty:
+                mr = mrow.iloc[0]
+                pct = 100 * (mr["disagreement_far"] / mr["disagreement_near"] - 1)
+                verdict = "widens off-support" if pct > 5 else ("narrows" if pct < -5 else "no clear change")
+                lines += [
+                    "",
+                    f"Mean ensemble disagreement is **{pct:+.0f}%** for unseen vs held-out same regions — {verdict}.",
+                    "",
+                    f"![Near/far transfer]({rel_results}/figures/loro/loro_{config.LORO_GROUP}.png)",
+                ]
 
     lines += ["", "## Figures", "", "### Joint variability (correlation)", "",
               "**Correlation matrices**", "",
@@ -282,83 +464,29 @@ def main():
     )
     log.info("Split into %d train / %d test rows", len(train_df), len(test_df))
 
-    log.info("Running physics-informed Monte Carlo generator...")
-    physics_mc_generated = physics_mc_generator.generate(
-        train_df, config.FEATURES, config.CAUSAL_GRAPH, config.ROOT_VARIABLES,
-        n_samples=config.N_SAMPLES,
-    )
-    log.info("Physics-informed MC: generated %d rows", len(physics_mc_generated))
-
-    log.info("Running regression generator...")
-    regression_generated = regression_generator.generate(
-        train_df, config.FEATURES,
-        n_samples=config.N_SAMPLES,
-    )
-    log.info("Regression: generated %d rows", len(regression_generated))
-
     if config.IS_PRE_SCALED:
-        vae_input = train_df[config.FEATURES].values
         vae_scaler = None
     else:
         vae_scaler = StandardScaler().fit(train_df[config.FEATURES])
-        vae_input = vae_scaler.transform(train_df[config.FEATURES])
 
-    log.info("Training VAE generator...")
-    vae_generated = vae_generator.generate(
-        vae_input,
-        config.FEATURES,
-        latent_dim=config.LATENT_DIM,
-        epochs=config.VAE_EPOCHS,
-        beta=config.VAE_BETA,
-        n_samples=config.N_SAMPLES,
-        scaler=vae_scaler,
-        use_minibatch=config.VAE_USE_MINIBATCH,
-        batch_size=config.VAE_BATCH_SIZE,
-        cov_weight=config.VAE_COV_WEIGHT,
-        patience=config.VAE_PATIENCE,
-        hidden_dim=config.VAE_HIDDEN_DIM,
-        dropout=config.VAE_DROPOUT,
-        free_bits=config.VAE_FREE_BITS,
-    )
-    log.info("VAE: generated %d rows", len(vae_generated))
+    log.info("Generating synthetic populations (physics-MC, regression, VAE, hybrid VAE)...")
+    generated = generate_population(train_df, config, vae_scaler)
+    for key, gen_df in generated.items():
+        log.info("  %-30s generated %d rows", display_name(key), len(gen_df))
 
-    log.info("Training hybrid physics-informed VAE generator...")
-    hybrid_vae_generated = hybrid_vae_generator.generate(
-        vae_input,
-        config.FEATURES,
-        config.CAUSAL_GRAPH,
-        latent_dim=config.LATENT_DIM,
-        epochs=config.VAE_EPOCHS,
-        beta=config.VAE_BETA,
-        n_samples=config.N_SAMPLES,
-        scaler=vae_scaler,
-        use_minibatch=config.VAE_USE_MINIBATCH,
-        batch_size=config.VAE_BATCH_SIZE,
-        cov_weight=config.VAE_COV_WEIGHT,
-        physics_weight=config.VAE_PHYSICS_WEIGHT,
-        marginal_weight=config.VAE_MARGINAL_WEIGHT,
-        prior_type=config.VAE_PRIOR_TYPE,
-        constrain_generated=config.VAE_CONSTRAIN_GENERATED,
-        calibrate_marginals=config.VAE_CALIBRATE_MARGINALS,
-        patience=config.VAE_PATIENCE,
-        hidden_dim=config.VAE_HIDDEN_DIM,
-        dropout=config.VAE_DROPOUT,
-        free_bits=config.VAE_FREE_BITS,
-    )
-    log.info("Hybrid physics-informed VAE: generated %d rows", len(hybrid_vae_generated))
+    engines = {key: (ENGINE_MODULES[key], gen) for key, gen in generated.items()}
 
-    engines = {
-        "physics_mc": (physics_mc_generator, physics_mc_generated),
-        "regression": (regression_generator, regression_generated),
-        "vae": (vae_generator, vae_generated),
-        "hybrid_vae": (hybrid_vae_generator, hybrid_vae_generated),
-    }
-    generated = {key: gen_df for key, (_, gen_df) in engines.items()}
-
-    os.makedirs(f"{RESULTS_DIR}/synthetic_data", exist_ok=True)
+    synth_dir = f"{RESULTS_DIR}/synthetic_data"
+    os.makedirs(synth_dir, exist_ok=True)
+    # Clear stale engine CSVs first — the engine set can change between runs
+    # (e.g. toggling VAE_REPORT_UNCALIBRATED adds/removes hybrid_vae_raw), and a
+    # leftover file would misrepresent what this run actually produced.
+    for stale in os.listdir(synth_dir):
+        if stale.endswith(".csv"):
+            os.remove(os.path.join(synth_dir, stale))
     for name, gen_df in generated.items():
-        gen_df.to_csv(f"{RESULTS_DIR}/synthetic_data/{name}.csv", index=False)
-    log.info("Saved synthetic data to %s/synthetic_data/", RESULTS_DIR)
+        gen_df.to_csv(f"{synth_dir}/{name}.csv", index=False)
+    log.info("Saved synthetic data to %s/", synth_dir)
 
     log.info("Running evaluation...")
     summary, ks_table, std_table = run_evaluation(
@@ -395,8 +523,80 @@ def main():
     for name in engines:
         log.info("  %-30s mean std ratio=%.3f", display_name(name), mean_std_ratio[name])
 
-    write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, engines)
+    log.info(
+        "Checking uncertainty calibration — fraction of real held-out values falling inside each "
+        "engine's generated central interval, vs the nominal rate (coverage near nominal = "
+        "calibrated; below = over-confident/too narrow; above = too wide)..."
+    )
+    coverage_df = coverage_metrics(generated, test_df, config.FEATURES)
+    coverage_df.to_csv(f"{RESULTS_DIR}/coverage.csv", index=False)
+    save_calibration_plot(
+        generated, test_df, config.FEATURES,
+        os.path.join(f"{RESULTS_DIR}/figures/marginals", "coverage_calibration.png"),
+    )
+    for _, row in coverage_df.iterrows():
+        log.info(
+            "  %-30s coverage@%d%%=%.3f (nominal %.2f)  calibration_error=%.4f",
+            display_name(row["method"]), int(HEADLINE_LEVEL * 100),
+            row["coverage_at_90"], HEADLINE_LEVEL, row["calibration_error"],
+        )
+
+    tstr_df = run_tstr_step(df, train_df, test_df, vae_scaler)
+
+    write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, engines,
+                 tstr_df, coverage_df)
     log.info("Wrote %s", REPORT_PATH)
+
+
+def run_tstr_step(df, train_df, test_df, vae_scaler):
+    """
+    Downstream-utility check: build a labeled synthetic training set per engine
+    by stratified conditional generation (each class generated from its own
+    real rows), train a classifier on it, and score it against real held-out
+    rows (see src.evaluation.tstr). Runs only when config.RUN_TSTR is set and
+    the dataset has a usable categorical label with >=2 classes; returns the
+    results DataFrame, or None when skipped.
+    """
+    if not getattr(config, "RUN_TSTR", False) or not config.LABEL_COLUMN:
+        return None
+    if config.LABEL_COLUMN not in df.columns:
+        log.info("TSTR skipped — label column %r not in the data.", config.LABEL_COLUMN)
+        return None
+
+    classes = sorted(train_df[config.LABEL_COLUMN].dropna().unique())
+    if len(classes) < 2:
+        log.info("TSTR skipped — label %r has fewer than 2 classes.", config.LABEL_COLUMN)
+        return None
+
+    log.info(
+        "Running TSTR (train-on-synthetic, test-on-real) on label %r (%d classes) — "
+        "generating each class separately per engine...",
+        config.LABEL_COLUMN, len(classes),
+    )
+
+    labeled = {key: [] for key in ENGINE_MODULES}
+    for cls in classes:
+        class_df = train_df[train_df[config.LABEL_COLUMN] == cls]
+        class_pop = generate_population(class_df, config, vae_scaler, n_samples=len(class_df), quiet=True)
+        for key, gen_df in class_pop.items():
+            tagged = gen_df.copy()
+            tagged[config.LABEL_COLUMN] = cls
+            labeled[key].append(tagged)
+    # Skip engines that produced no frames (e.g. the optional hybrid_vae_raw
+    # ablation, which generate_population only emits in the main verbose run).
+    labeled = {key: pd.concat(frames, ignore_index=True)
+               for key, frames in labeled.items() if frames}
+
+    tstr_df = run_tstr(labeled, train_df, test_df, config.FEATURES, config.LABEL_COLUMN,
+                       seed=config.RANDOM_SEED)
+    tstr_df.to_csv(f"{RESULTS_DIR}/tstr.csv", index=False)
+
+    for _, row in tstr_df.iterrows():
+        label = "Real (TRTR ceiling)" if row["method"] == "real" else display_name(row["method"])
+        auc = "  n/a" if pd.isna(row["roc_auc"]) else f"{row['roc_auc']:.3f}"
+        log.info("  %-30s accuracy=%.3f  roc_auc=%s", label, row["accuracy"], auc)
+
+    return tstr_df
 
 
 if __name__ == "__main__":

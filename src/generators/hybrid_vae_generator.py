@@ -171,8 +171,14 @@ def _physics_loss(batch, edges):
                                 VAE variance-collapse failure) as much as one too
                                 loose, so the physics term defends spread rather
                                 than suppressing it.
+
+    Returns 0 when there are no edges (an empty causal graph — e.g. a dataset
+    with no sensible mechanistic structure, such as NIR spectra), in which case
+    the hybrid reduces to a calibrated VAE with the covariance term.
     """
     total = batch.new_zeros(())
+    if not edges:
+        return total
 
     for edge in edges:
         parent = batch[:, edge["parent_idx"]]

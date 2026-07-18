@@ -1,0 +1,4 @@
+dataset,disagree_far,disagree_near,widening_%,coverage_far,coverage_near
+Banana (quality),0.1184,0.0676,75,0.986,0.997
+Date (nutrients),0.0925,0.0546,70,0.737,0.696
+Safou (nutrients),0.0629,0.0491,28,0.315,0.589

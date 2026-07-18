@@ -1,0 +1,21 @@
+Engine,Feature,KS Statistic,P-Value
+Physics-Informed Monte Carlo,ripeness_index,0.10166666666666668,0.01580706911063452
+Physics-Informed Monte Carlo,sugar_content_brix,0.08533333333333337,0.06561475594081739
+Physics-Informed Monte Carlo,firmness_kgf,0.093,0.03469677997022317
+Physics-Informed Monte Carlo,length_cm,0.06366666666666665,0.294775622148817
+Physics-Informed Monte Carlo,weight_g,0.08700000000000002,0.057394284063480606
+Regression,ripeness_index,0.08433333333333337,0.07101365957098715
+Regression,sugar_content_brix,0.06299999999999994,0.3065048341111168
+Regression,firmness_kgf,0.05499999999999999,0.4716182534391948
+Regression,length_cm,0.09033333333333332,0.04357454672972317
+Regression,weight_g,0.07533333333333336,0.13872776995668681
+Variational Autoencoder,ripeness_index,0.11499999999999999,0.004112662445739346
+Variational Autoencoder,sugar_content_brix,0.076,0.13235816813601756
+Variational Autoencoder,firmness_kgf,0.1186666666666667,0.0027584598238931573
+Variational Autoencoder,length_cm,0.10200000000000009,0.015314816646303226
+Variational Autoencoder,weight_g,0.116,0.003692826141689629
+Physics-Informed VAE (Hybrid),ripeness_index,0.07466666666666666,0.14534306137586098
+Physics-Informed VAE (Hybrid),sugar_content_brix,0.05033333333333334,0.5854097815160919
+Physics-Informed VAE (Hybrid),firmness_kgf,0.0606666666666667,0.35008137885100415
+Physics-Informed VAE (Hybrid),length_cm,0.044333333333333336,0.738119607648162
+Physics-Informed VAE (Hybrid),weight_g,0.041000000000000036,0.8177222937385226
