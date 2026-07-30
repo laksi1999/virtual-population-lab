@@ -12,7 +12,3 @@ __pycache__/
 .idea/
 _to_delete/
 # Private narrative docs — kept local, not published
-SUPPLEMENTARY.md
-supplementary-material.docx
-insights.md
-results/_summary/supplementary_tables.tex
