@@ -71,7 +71,7 @@ def _train_ensemble(train_df, features, group_col, groups):
     cond = np.stack([_onehot(groups.index(v), len(groups)) for v in train_df[group_col]])
     models = [
         cvae.train(x, cond, latent_dim=LATENT_DIM, epochs=EPOCHS, beta=BETA,
-                   hidden_dim=HIDDEN_DIM, free_bits=FREE_BITS, patience=PATIENCE, seed=100 + k)
+                   hidden_dim=HIDDEN_DIM, free_bits=FREE_BITS, patience=PATIENCE, seed=SEED + 100 + k)
         for k in range(K_ENSEMBLE)
     ]
     return models, scaler
@@ -89,8 +89,39 @@ def _generate(models, scaler, target_idx, groups, features):
     return pd.DataFrame(np.vstack(pooled), columns=features), np.stack(member_means)
 
 
+def _ecdf(gen, y):
+    """P(gen <= y) for each y, from the generated population `gen`."""
+    gs = np.sort(gen)
+    return np.searchsorted(gs, y, side="right") / len(gs)
+
+
+def _conformal_shat(gen, y_cal, level=0.90):
+    """Split-conformal half-width (in probability units): the finite-sample
+    quantile of the calibration reals' distance from the generated median, so
+    that [F^-1(0.5-shat), F^-1(0.5+shat)] contains ~`level` of them. Capped at
+    0.5 (the full generated range). This recalibrates an interval that is too
+    narrow (small-n VAE shrinkage) or too wide (ensemble pooling)."""
+    s = np.abs(_ecdf(gen, y_cal) - 0.5)
+    m = len(s)
+    if m == 0:
+        return (1 - level) / 2 + level / 2  # degenerate; full-ish interval
+    k = min(max(int(np.ceil((m + 1) * level)) - 1, 0), m - 1)
+    return min(float(np.sort(s)[k]), 0.5)
+
+
+def _conf_cov(gen, y_eval, shat):
+    """Coverage of the conformal interval [F^-1(0.5-shat), F^-1(0.5+shat)] on y_eval."""
+    lo, hi = np.quantile(gen, 0.5 - shat), np.quantile(gen, 0.5 + shat)
+    return float(np.mean((y_eval >= lo) & (y_eval <= hi)))
+
+
+# coverage_*_conf = conformal-recalibrated coverage: the per-feature interval width
+# is calibrated on the NEAR held-out reals (target 0.90) and the SAME width is
+# transferred off-support (FAR). NEAR conf should reach ~0.90 in-region; the FAR
+# conf gap that remains is genuine distribution shift (see SUPPLEMENTARY.md S5.4).
 _SCHEMA = ["group", "n", "corr_far", "corr_near", "ks_far", "ks_near",
-           "coverage_far", "coverage_near", "disagreement_far", "disagreement_near"]
+           "coverage_far", "coverage_near", "coverage_far_conf", "coverage_near_conf",
+           "disagreement_far", "disagreement_near"]
 
 
 def leave_one_group_out(df, all_features, group_col):
@@ -136,17 +167,31 @@ def leave_one_group_out(df, all_features, group_col):
             ks = marginal_ks_table(real_df, {"g": gen}, features)["ks_stat"].mean()
             cov = np.mean([_central_coverage(gen[f].values, real_df[f].values, 0.90) for f in features])
             dis = float(np.mean(means.std(axis=0) / global_std))
-            return corr, ks, cov, dis
+            return gen, corr, ks, cov, dis
 
-        cn, kn, vn, dn = _metrics(all_groups.index(tg), te[features].reset_index(drop=True))
-        far = [_metrics(all_groups.index(og), df[df[group_col] == og][features].reset_index(drop=True))
-               for og in all_groups if og != tg]
-        cf, kf, vf, dff = np.mean(far, axis=0)
+        te_df = te[features].reset_index(drop=True)
+        gen_near, cn, kn, vn, dn = _metrics(all_groups.index(tg), te_df)
+        # Conformal width calibrated per feature on the NEAR held-out reals, then
+        # reused off-support. NEAR conf is ~self-calibrated to 0.90; FAR conf
+        # applies the SAME width to the shifted region.
+        shat = {f: _conformal_shat(gen_near[f].values, te_df[f].values) for f in features}
+        vconf_n = np.mean([_conf_cov(gen_near[f].values, te_df[f].values, shat[f]) for f in features])
+
+        far = []
+        for og in all_groups:
+            if og == tg:
+                continue
+            real_far = df[df[group_col] == og][features].reset_index(drop=True)
+            gen_far, cf, kf, vf, dff = _metrics(all_groups.index(og), real_far)
+            vconf_f = np.mean([_conf_cov(gen_far[f].values, real_far[f].values, shat[f]) for f in features])
+            far.append((cf, kf, vf, vconf_f, dff))
+        cf, kf, vf, vconf_f, dff = np.mean(far, axis=0)
 
         rows.append({
             "group": tg, "n": len(te),
             "corr_far": cf, "corr_near": cn, "ks_far": kf, "ks_near": kn,
             "coverage_far": vf, "coverage_near": vn,
+            "coverage_far_conf": vconf_f, "coverage_near_conf": vconf_n,
             "disagreement_far": dff, "disagreement_near": dn,
         })
 

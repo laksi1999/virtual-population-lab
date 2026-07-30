@@ -56,9 +56,11 @@ def main():
     log.info("Near/far results (FAR = different region/unseen, NEAR = held-out same region):")
     for _, r in loro_df.iterrows():
         log.info(
-            "  %-10s corr far/near=%.3f/%.3f  KS=%.3f/%.3f  cov90=%.3f/%.3f  disagree=%.4f/%.4f",
+            "  %-10s corr far/near=%.3f/%.3f  KS=%.3f/%.3f  cov90=%.3f/%.3f  "
+            "cov90-conformal=%.3f/%.3f  disagree=%.4f/%.4f",
             str(r["group"]), r["corr_far"], r["corr_near"], r["ks_far"], r["ks_near"],
-            r["coverage_far"], r["coverage_near"], r["disagreement_far"], r["disagreement_near"],
+            r["coverage_far"], r["coverage_near"], r["coverage_far_conf"], r["coverage_near_conf"],
+            r["disagreement_far"], r["disagreement_near"],
         )
 
     mean = loro_df[loro_df["group"] == "MEAN"].iloc[0]

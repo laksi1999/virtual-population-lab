@@ -33,7 +33,7 @@ class CVAE(nn.Module):
 
     def forward(self, x, c):
         h = self.encoder(torch.cat([x, c], dim=1))
-        mu, logvar = h[:, :self.latent_dim], h[:, self.latent_dim:]
+        mu, logvar = h[:, :self.latent_dim], torch.clamp(h[:, self.latent_dim:], -8.0, 8.0)
         z = mu + torch.randn_like(mu) * torch.exp(0.5 * logvar)
         return self.decoder(torch.cat([z, c], dim=1)), mu, logvar
 

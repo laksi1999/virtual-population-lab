@@ -1,6 +1,6 @@
 # Virtual Population Lab — Report
 
-_Auto-generated on 2026-07-18 21:53 from `biofood_date_region`. Re-run `make run CONFIG=biofood_date_region` to refresh._
+_Auto-generated on 2026-07-23 21:51 from `biofood_date_region`. Re-run `make run CONFIG=biofood_date_region` to refresh._
 
 ## Objective
 
@@ -180,15 +180,15 @@ constraint doesn't change any of them.
 | Engine | Correlation Distance (Euclidean) | Mean KS Statistic |
 |---|---|---|
 | Physics-Informed Monte Carlo | 1.1289 | 0.2081 |
-| Regression | 1.1920 | 0.1623 |
+| Regression | 1.1258 | 0.1621 |
 | Variational Autoencoder | 0.7805 | 0.3247 |
-| Physics-Informed VAE (Hybrid) | **0.5398** | **0.1443** |
+| Physics-Informed VAE (Hybrid) | **0.6242** | **0.1443** |
 
 (Lower is better for both metrics; bold = best.)
 
 ## Findings
 
-- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.5398)
+- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.6242)
 - Best **Mean KS Statistic**: Physics-Informed VAE (Hybrid) (0.1443)
 
 Per-feature marginal fit (two-sample KS test, real vs. generated; lower ks_stat / higher p_value = closer):
@@ -204,11 +204,11 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|
-| Water | 0.1590 | 0.1330 | 0.2250 | **0.1250** |
-| Potassium | 0.1270 | **0.1170** | 0.2800 | 0.1340 |
-| Iron | 0.2740 | 0.1920 | 0.3037 | **0.1247** |
-| Calcium | 0.3357 | 0.2457 | 0.4797 | **0.1847** |
-| Magnesium | 0.1450 | **0.1240** | 0.3350 | 0.1533 |
+| Water | 0.1590 | **0.1100** | 0.2250 | 0.1250 |
+| Potassium | 0.1270 | **0.1140** | 0.2800 | 0.1340 |
+| Iron | 0.2740 | 0.1970 | 0.3037 | **0.1247** |
+| Calcium | 0.3357 | 0.2507 | 0.4797 | **0.1847** |
+| Magnesium | 0.1450 | **0.1390** | 0.3350 | 0.1533 |
 
 ## Feature Spread Comparison
 
@@ -216,11 +216,11 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Real Std | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|---|
-| Water | 25.692 | 24.041 (0.94x) | 22.973 (0.89x) | 20.742 (0.81x) | 24.019 (0.93x) |
-| Potassium | 224.119 | 218.264 (0.97x) | 206.249 (0.92x) | 254.030 (1.13x) | 195.641 (0.87x) |
-| Iron | 1.025 | 0.896 (0.87x) | 0.963 (0.94x) | 0.937 (0.91x) | 0.861 (0.84x) |
-| Calcium | 30.063 | 29.957 (1.00x) | 29.065 (0.97x) | 37.955 (1.26x) | 26.112 (0.87x) |
-| Magnesium | 22.143 | 17.824 (0.80x) | 16.155 (0.73x) | 21.520 (0.97x) | 15.953 (0.72x) |
+| Water | 25.692 | 24.041 (0.94x) | 24.340 (0.95x) | 20.742 (0.81x) | 24.019 (0.93x) |
+| Potassium | 224.119 | 218.264 (0.97x) | 219.692 (0.98x) | 254.030 (1.13x) | 195.641 (0.87x) |
+| Iron | 1.025 | 0.896 (0.87x) | 0.941 (0.92x) | 0.937 (0.91x) | 0.861 (0.84x) |
+| Calcium | 30.063 | 29.957 (1.00x) | 29.466 (0.98x) | 37.955 (1.26x) | 26.112 (0.87x) |
+| Magnesium | 22.143 | 17.824 (0.80x) | 16.235 (0.73x) | 21.520 (0.97x) | 15.953 (0.72x) |
 
 ## Generalization Check
 
@@ -229,9 +229,9 @@ Correlation distance for each engine's synthetic data against the train split it
 | Engine | Correlation Dist. (vs. Train) | Correlation Dist. (vs. Test) | Gap |
 |---|---|---|---|
 | Physics-Informed Monte Carlo | 1.0608 | 1.1289 | 0.0681 |
-| Regression | 1.1452 | 1.1920 | 0.0467 |
+| Regression | 1.0229 | 1.1258 | 0.1029 |
 | Variational Autoencoder | 0.5718 | 0.7805 | 0.2088 |
-| Physics-Informed VAE (Hybrid) | 0.1912 | 0.5398 | 0.3485 |
+| Physics-Informed VAE (Hybrid) | 0.2553 | 0.6242 | 0.3688 |
 
 ## Uncertainty Calibration (Coverage)
 
@@ -240,7 +240,7 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 | Engine | Coverage @ 90% (nominal 0.90) | Calibration Error |
 |---|---|---|
 | Physics-Informed Monte Carlo | 0.875 | 0.0831 |
-| Regression | 0.883 | 0.0768 |
+| Regression | 0.883 | 0.0754 |
 | Variational Autoencoder | 0.742 | 0.1430 |
 | Physics-Informed VAE (Hybrid) | 0.817 | **0.0695** |
 
@@ -250,14 +250,14 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 
 ## Support-Aware Uncertainty (Near/Far Transfer)
 
-Same-model transfer over `Region`: one conditional-VAE ensemble is trained per region, then queried for the **held-out same region (NEAR)** vs a **different region (FAR)**. A model that 'knows what it doesn't know' has ensemble **disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and coverage degrade. (From the latest `make loro` run.)
+Same-model transfer over `Region`: one conditional-VAE ensemble is trained per region, then queried for the **held-out same region (NEAR)** vs a **different region (FAR)**. A model that 'knows what it doesn't know' has ensemble **disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and coverage degrade. `coverage-conformal` recalibrates each interval's width on the NEAR held-out reals (target 0.90) and transfers that width off-support — it fixes NEAR coverage and partially closes the FAR gap (the residual is genuine distribution shift). (From the latest `make loro` run.)
 
-| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | corr FAR / NEAR |
-|---|---|---|---|
-| UAE | 0.0925 / 0.0546 | 0.737 / 0.696 | 1.782 / 1.825 |
-| **MEAN** | 0.0925 / 0.0546 | 0.737 / 0.696 | 1.782 / 1.825 |
+| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | coverage-conformal FAR / NEAR | corr FAR / NEAR |
+|---|---|---|---|---|
+| UAE | 0.1078 / 0.0609 | 0.737 / 0.722 | 0.803 / 0.913 | 1.763 / 1.829 |
+| **MEAN** | 0.1078 / 0.0609 | 0.737 / 0.722 | 0.803 / 0.913 | 1.763 / 1.829 |
 
-Mean ensemble disagreement is **+70%** for unseen vs held-out same regions — widens off-support.
+Mean ensemble disagreement is **+77%** for unseen vs held-out same regions — widens off-support.
 
 ![Near/far transfer](../../results/biofood_date_region/figures/loro/loro_Region.png)
 

@@ -1,6 +1,6 @@
 # Virtual Population Lab — Report
 
-_Auto-generated on 2026-07-18 21:53 from `biofood_safou_region`. Re-run `make run CONFIG=biofood_safou_region` to refresh._
+_Auto-generated on 2026-07-23 21:51 from `biofood_safou_region`. Re-run `make run CONFIG=biofood_safou_region` to refresh._
 
 ## Objective
 
@@ -179,23 +179,23 @@ constraint doesn't change any of them.
 
 | Engine | Correlation Distance (Euclidean) | Mean KS Statistic |
 |---|---|---|
-| Physics-Informed Monte Carlo | 0.3507 | **0.2492** |
-| Regression | 0.6530 | 0.3006 |
-| Variational Autoencoder | 3.4414 | 0.5958 |
-| Physics-Informed VAE (Hybrid) | **0.1123** | 0.2898 |
+| Physics-Informed Monte Carlo | **0.3507** | **0.2492** |
+| Regression | 0.5838 | 0.2924 |
+| Variational Autoencoder | 0.5959 | 0.3090 |
+| Physics-Informed VAE (Hybrid) | 0.5595 | 0.2898 |
 
 (Lower is better for both metrics; bold = best.)
 
 ## Findings
 
-- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.1123)
+- Best **Correlation Distance (Euclidean)**: Physics-Informed Monte Carlo (0.3507)
 - Best **Mean KS Statistic**: Physics-Informed Monte Carlo (0.2492)
 
 Per-feature marginal fit (two-sample KS test, real vs. generated; lower ks_stat / higher p_value = closer):
 
 - **Physics-Informed Monte Carlo**: 0/4 features statistically distinguishable from real (p < 0.05)
 - **Regression**: 0/4 features statistically distinguishable from real (p < 0.05)
-- **Variational Autoencoder**: 4/4 features statistically distinguishable from real (p < 0.05)
+- **Variational Autoencoder**: 0/4 features statistically distinguishable from real (p < 0.05)
 - **Physics-Informed VAE (Hybrid)**: 0/4 features statistically distinguishable from real (p < 0.05)
 
 ## Per-Feature KS Statistic
@@ -204,10 +204,10 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|
-| Water | **0.2535** | 0.3343 | 0.9820 | 0.3223 |
-| Fat | **0.2485** | 0.2904 | 0.4292 | 0.2903 |
-| Palmitic | **0.2385** | 0.2855 | 0.4135 | 0.2924 |
-| Stearic | 0.2562 | 0.2923 | 0.5582 | **0.2543** |
+| Water | **0.2535** | 0.2984 | 0.3355 | 0.3223 |
+| Fat | **0.2485** | 0.2834 | 0.3355 | 0.2903 |
+| Palmitic | **0.2385** | 0.2715 | 0.3175 | 0.2924 |
+| Stearic | 0.2562 | 0.3163 | **0.2473** | 0.2543 |
 
 ## Feature Spread Comparison
 
@@ -215,10 +215,10 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Real Std | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|---|
-| Water | 11.395 | 10.014 (0.88x) | 9.350 (0.82x) | 12.824 (1.13x) | 8.869 (0.78x) |
-| Fat | 10.947 | 9.707 (0.89x) | 9.069 (0.83x) | 4.716 (0.43x) | 8.855 (0.81x) |
-| Palmitic | 4.135 | 3.883 (0.94x) | 3.774 (0.91x) | 1.841 (0.45x) | 3.536 (0.86x) |
-| Stearic | 0.168 | 0.230 (1.37x) | 0.219 (1.31x) | 0.124 (0.74x) | 0.203 (1.21x) |
+| Water | 11.395 | 10.014 (0.88x) | 9.431 (0.83x) | 7.627 (0.67x) | 8.869 (0.78x) |
+| Fat | 10.947 | 9.707 (0.89x) | 9.346 (0.85x) | 7.064 (0.65x) | 8.855 (0.81x) |
+| Palmitic | 4.135 | 3.883 (0.94x) | 3.699 (0.89x) | 2.796 (0.68x) | 3.536 (0.86x) |
+| Stearic | 0.168 | 0.230 (1.37x) | 0.218 (1.30x) | 0.170 (1.01x) | 0.203 (1.21x) |
 
 ## Generalization Check
 
@@ -227,9 +227,9 @@ Correlation distance for each engine's synthetic data against the train split it
 | Engine | Correlation Dist. (vs. Train) | Correlation Dist. (vs. Test) | Gap |
 |---|---|---|---|
 | Physics-Informed Monte Carlo | 0.1074 | 0.3507 | 0.2433 |
-| Regression | 0.2886 | 0.6530 | 0.3644 |
-| Variational Autoencoder | 3.3048 | 3.4414 | 0.1366 |
-| Physics-Informed VAE (Hybrid) | 0.3588 | 0.1123 | 0.2465 |
+| Regression | 0.2864 | 0.5838 | 0.2974 |
+| Variational Autoencoder | 0.1702 | 0.5959 | 0.4257 |
+| Physics-Informed VAE (Hybrid) | 0.1273 | 0.5595 | 0.4322 |
 
 ## Uncertainty Calibration (Coverage)
 
@@ -238,8 +238,8 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 | Engine | Coverage @ 90% (nominal 0.90) | Calibration Error |
 |---|---|---|
 | Physics-Informed Monte Carlo | 0.962 | **0.1226** |
-| Regression | 0.885 | 0.1300 |
-| Variational Autoencoder | 0.423 | 0.3112 |
+| Regression | 0.904 | 0.1276 |
+| Variational Autoencoder | 0.673 | 0.1960 |
 | Physics-Informed VAE (Hybrid) | 0.846 | 0.1284 |
 
 (Coverage closest to nominal and lowest calibration error = best-calibrated uncertainty.)
@@ -248,15 +248,15 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 
 ## Support-Aware Uncertainty (Near/Far Transfer)
 
-Same-model transfer over `Region`: one conditional-VAE ensemble is trained per region, then queried for the **held-out same region (NEAR)** vs a **different region (FAR)**. A model that 'knows what it doesn't know' has ensemble **disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and coverage degrade. (From the latest `make loro` run.)
+Same-model transfer over `Region`: one conditional-VAE ensemble is trained per region, then queried for the **held-out same region (NEAR)** vs a **different region (FAR)**. A model that 'knows what it doesn't know' has ensemble **disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and coverage degrade. `coverage-conformal` recalibrates each interval's width on the NEAR held-out reals (target 0.90) and transfers that width off-support — it fixes NEAR coverage and partially closes the FAR gap (the residual is genuine distribution shift). (From the latest `make loro` run.)
 
-| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | corr FAR / NEAR |
-|---|---|---|---|
-| Congo | 0.0659 / 0.0456 | 0.250 / 0.750 | 1.505 / 0.766 |
-| Guinea | 0.0598 / 0.0526 | 0.381 / 0.429 | 1.334 / 0.233 |
-| **MEAN** | 0.0629 / 0.0491 | 0.315 / 0.589 | 1.419 / 0.500 |
+| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | coverage-conformal FAR / NEAR | corr FAR / NEAR |
+|---|---|---|---|---|
+| Congo | 0.0577 / 0.0553 | 0.250 / 0.750 | 0.550 / 0.875 | 1.727 / 0.577 |
+| Guinea | 0.1082 / 0.0692 | 0.405 / 0.429 | 0.714 / 0.571 | 1.345 / 0.137 |
+| **MEAN** | 0.0830 / 0.0623 | 0.327 / 0.589 | 0.632 / 0.723 | 1.536 / 0.357 |
 
-Mean ensemble disagreement is **+28%** for unseen vs held-out same regions — widens off-support.
+Mean ensemble disagreement is **+33%** for unseen vs held-out same regions — widens off-support.
 
 ![Near/far transfer](../../results/biofood_safou_region/figures/loro/loro_Region.png)
 

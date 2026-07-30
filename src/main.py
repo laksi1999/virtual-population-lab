@@ -76,30 +76,43 @@ def generate_population(source_df, config, scaler, n_samples=None, quiet=False):
         and getattr(config, "VAE_REPORT_UNCALIBRATED", False)
         and not quiet
     )
+    # Seed every engine from the SAME clean RNG state so each engine's output is
+    # independent of the order engines happen to run in. Previously the torch-based
+    # VAE ran before the hybrid and consumed the RNG stream first, giving the hybrid
+    # a different, order-dependent initialization — a non-reproducible artifact that
+    # made the same model score differently depending on what ran before it. Seeding
+    # both numpy (physics-MC, regression) and torch (VAE, hybrid) before each call
+    # makes the comparison order-invariant and every engine independently reproducible.
+    def _seed():
+        np.random.seed(config.RANDOM_SEED)
+        torch.manual_seed(config.RANDOM_SEED)
+
     try:
-        out = {
-            "physics_mc": physics_mc_generator.generate(
-                source_df, fx, config.CAUSAL_GRAPH, config.ROOT_VARIABLES, n_samples=n_samples,
-            ),
-            "regression": regression_generator.generate(source_df, fx, n_samples=n_samples),
-            "vae": vae_generator.generate(
-                vae_input, fx,
-                latent_dim=config.LATENT_DIM, epochs=config.VAE_EPOCHS, beta=config.VAE_BETA,
-                n_samples=n_samples, scaler=scaler,
-                use_minibatch=config.VAE_USE_MINIBATCH, batch_size=config.VAE_BATCH_SIZE,
-                cov_weight=config.VAE_COV_WEIGHT, patience=config.VAE_PATIENCE,
-                hidden_dim=config.VAE_HIDDEN_DIM, dropout=config.VAE_DROPOUT,
-                free_bits=config.VAE_FREE_BITS,
-            ),
-        }
-        if report_raw:
-            torch.manual_seed(config.RANDOM_SEED)
+        _seed()
+        out = {"physics_mc": physics_mc_generator.generate(
+            source_df, fx, config.CAUSAL_GRAPH, config.ROOT_VARIABLES, n_samples=n_samples,
+        )}
+        _seed()
+        out["regression"] = regression_generator.generate(source_df, fx, n_samples=n_samples)
+        _seed()
+        out["vae"] = vae_generator.generate(
+            vae_input, fx,
+            latent_dim=config.LATENT_DIM, epochs=config.VAE_EPOCHS, beta=config.VAE_BETA,
+            n_samples=n_samples, scaler=scaler,
+            use_minibatch=config.VAE_USE_MINIBATCH, batch_size=config.VAE_BATCH_SIZE,
+            cov_weight=config.VAE_COV_WEIGHT, patience=config.VAE_PATIENCE,
+            hidden_dim=config.VAE_HIDDEN_DIM, dropout=config.VAE_DROPOUT,
+            free_bits=config.VAE_FREE_BITS,
+        )
+        _seed()
         out["hybrid_vae"] = hybrid_vae_generator.generate(
             vae_input, fx, config.CAUSAL_GRAPH,
             calibrate_marginals=config.VAE_CALIBRATE_MARGINALS, **hybrid_kwargs,
         )
         if report_raw:
-            torch.manual_seed(config.RANDOM_SEED)
+            # Same seed as the calibrated hybrid above, so the two differ ONLY by
+            # the calibration post-step — a clean calibration ablation.
+            _seed()
             out["hybrid_vae_raw"] = hybrid_vae_generator.generate(
                 vae_input, fx, config.CAUSAL_GRAPH,
                 calibrate_marginals=False, **hybrid_kwargs,
@@ -371,6 +384,7 @@ def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, en
     if getattr(config, "LORO_GROUP", "") and os.path.exists(loro_path):
         lo = pd.read_csv(loro_path)
         if not lo.empty:
+            has_conf = "coverage_far_conf" in lo.columns
             lines += [
                 "",
                 "## Support-Aware Uncertainty (Near/Far Transfer)",
@@ -379,17 +393,24 @@ def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, en
                 "trained per region, then queried for the **held-out same region (NEAR)** vs a "
                 "**different region (FAR)**. A model that 'knows what it doesn't know' has ensemble "
                 "**disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and "
-                "coverage degrade. (From the latest `make loro` run.)",
+                "coverage degrade. `coverage-conformal` recalibrates each interval's width on the "
+                "NEAR held-out reals (target 0.90) and transfers that width off-support — it fixes "
+                "NEAR coverage and partially closes the FAR gap (the residual is genuine "
+                "distribution shift). (From the latest `make loro` run.)",
                 "",
-                "| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | corr FAR / NEAR |",
-                "|---|---|---|---|",
+                "| Train region | disagreement FAR / NEAR | coverage FAR / NEAR |"
+                + (" coverage-conformal FAR / NEAR |" if has_conf else "") + " corr FAR / NEAR |",
+                "|---|---|---|" + ("---|" if has_conf else "") + "---|",
             ]
             for _, r in lo.iterrows():
                 g = "**MEAN**" if r["group"] == "MEAN" else str(r["group"])
+                conf_cell = (f" {r['coverage_far_conf']:.3f} / {r['coverage_near_conf']:.3f} |"
+                             if has_conf else "")
                 lines.append(
                     f"| {g} | {r['disagreement_far']:.4f} / {r['disagreement_near']:.4f} | "
-                    f"{r['coverage_far']:.3f} / {r['coverage_near']:.3f} | "
-                    f"{r['corr_far']:.3f} / {r['corr_near']:.3f} |"
+                    f"{r['coverage_far']:.3f} / {r['coverage_near']:.3f} |"
+                    + conf_cell +
+                    f" {r['corr_far']:.3f} / {r['corr_near']:.3f} |"
                 )
             mrow = lo[lo["group"] == "MEAN"]
             if not mrow.empty:

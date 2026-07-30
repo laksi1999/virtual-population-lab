@@ -1,6 +1,6 @@
 # Virtual Population Lab — Report
 
-_Auto-generated on 2026-07-18 21:53 from `banana_quality`. Re-run `make run CONFIG=banana_quality` to refresh._
+_Auto-generated on 2026-07-23 21:51 from `banana_quality`. Re-run `make run CONFIG=banana_quality` to refresh._
 
 ## Objective
 
@@ -179,23 +179,23 @@ constraint doesn't change any of them.
 
 | Engine | Correlation Distance (Euclidean) | Mean KS Statistic |
 |---|---|---|
-| Physics-Informed Monte Carlo | 0.3499 | 0.0861 |
-| Regression | 0.3454 | 0.0736 |
-| Variational Autoencoder | 0.3617 | 0.1055 |
-| Physics-Informed VAE (Hybrid) | **0.2918** | **0.0542** |
+| Physics-Informed Monte Carlo | **0.3499** | 0.0861 |
+| Regression | 0.3509 | 0.0688 |
+| Variational Autoencoder | 0.4393 | 0.0945 |
+| Physics-Informed VAE (Hybrid) | 0.3930 | **0.0542** |
 
 (Lower is better for both metrics; bold = best.)
 
 ## Findings
 
-- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.2918)
+- Best **Correlation Distance (Euclidean)**: Physics-Informed Monte Carlo (0.3499)
 - Best **Mean KS Statistic**: Physics-Informed VAE (Hybrid) (0.0542)
 
 Per-feature marginal fit (two-sample KS test, real vs. generated; lower ks_stat / higher p_value = closer):
 
 - **Physics-Informed Monte Carlo**: 2/5 features statistically distinguishable from real (p < 0.05)
-- **Regression**: 1/5 features statistically distinguishable from real (p < 0.05)
-- **Variational Autoencoder**: 4/5 features statistically distinguishable from real (p < 0.05)
+- **Regression**: 0/5 features statistically distinguishable from real (p < 0.05)
+- **Variational Autoencoder**: 2/5 features statistically distinguishable from real (p < 0.05)
 - **Physics-Informed VAE (Hybrid)**: 0/5 features statistically distinguishable from real (p < 0.05)
 
 ## Per-Feature KS Statistic
@@ -204,11 +204,11 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|
-| ripeness_index | 0.1017 | 0.0843 | 0.1150 | **0.0747** |
-| sugar_content_brix | 0.0853 | 0.0630 | 0.0760 | **0.0503** |
-| firmness_kgf | 0.0930 | **0.0550** | 0.1187 | 0.0607 |
-| length_cm | 0.0637 | 0.0903 | 0.1020 | **0.0443** |
-| weight_g | 0.0870 | 0.0753 | 0.1160 | **0.0410** |
+| ripeness_index | 0.1017 | **0.0717** | 0.1183 | 0.0747 |
+| sugar_content_brix | 0.0853 | 0.0647 | 0.0837 | **0.0503** |
+| firmness_kgf | 0.0930 | **0.0530** | 0.1127 | 0.0607 |
+| length_cm | 0.0637 | 0.0780 | 0.0810 | **0.0443** |
+| weight_g | 0.0870 | 0.0767 | 0.0770 | **0.0410** |
 
 ## Feature Spread Comparison
 
@@ -216,11 +216,11 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Real Std | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|---|
-| ripeness_index | 1.765 | 1.820 (1.03x) | 1.897 (1.07x) | 2.479 (1.40x) | 1.746 (0.99x) |
-| sugar_content_brix | 2.039 | 2.021 (0.99x) | 2.260 (1.11x) | 2.281 (1.12x) | 2.031 (1.00x) |
-| firmness_kgf | 1.324 | 1.277 (0.96x) | 1.408 (1.06x) | 1.906 (1.44x) | 1.272 (0.96x) |
-| length_cm | 5.607 | 5.800 (1.03x) | 6.490 (1.16x) | 7.543 (1.35x) | 5.785 (1.03x) |
-| weight_g | 48.595 | 49.199 (1.01x) | 56.590 (1.16x) | 69.327 (1.43x) | 49.347 (1.02x) |
+| ripeness_index | 1.765 | 1.820 (1.03x) | 1.944 (1.10x) | 2.007 (1.14x) | 1.746 (0.99x) |
+| sugar_content_brix | 2.039 | 2.021 (0.99x) | 2.220 (1.09x) | 2.090 (1.03x) | 2.031 (1.00x) |
+| firmness_kgf | 1.324 | 1.277 (0.96x) | 1.408 (1.06x) | 1.673 (1.26x) | 1.272 (0.96x) |
+| length_cm | 5.607 | 5.800 (1.03x) | 6.651 (1.19x) | 6.949 (1.24x) | 5.785 (1.03x) |
+| weight_g | 48.595 | 49.199 (1.01x) | 56.068 (1.15x) | 56.224 (1.16x) | 49.347 (1.02x) |
 
 ## Generalization Check
 
@@ -229,9 +229,9 @@ Correlation distance for each engine's synthetic data against the train split it
 | Engine | Correlation Dist. (vs. Train) | Correlation Dist. (vs. Test) | Gap |
 |---|---|---|---|
 | Physics-Informed Monte Carlo | 0.2469 | 0.3499 | 0.1030 |
-| Regression | 0.2433 | 0.3454 | 0.1021 |
-| Variational Autoencoder | 0.2864 | 0.3617 | 0.0753 |
-| Physics-Informed VAE (Hybrid) | 0.1316 | 0.2918 | 0.1602 |
+| Regression | 0.3363 | 0.3509 | 0.0146 |
+| Variational Autoencoder | 0.4373 | 0.4393 | 0.0020 |
+| Physics-Informed VAE (Hybrid) | 0.1631 | 0.3930 | 0.2300 |
 
 ## Downstream Utility (TSTR)
 
@@ -240,10 +240,10 @@ Train-on-Synthetic, Test-on-Real for the `quality_category` label: a RandomFores
 | Trained on | Accuracy | ROC-AUC |
 |---|---|---|
 | **Real (TRTR ceiling)** | 0.9400 | n/a |
-| Physics-Informed Monte Carlo | 0.8833 | n/a |
-| Regression | 0.8267 | n/a |
-| Variational Autoencoder | 0.8867 | n/a |
-| Physics-Informed VAE (Hybrid) | 0.9167 | n/a |
+| Physics-Informed Monte Carlo | 0.8700 | n/a |
+| Regression | 0.8367 | n/a |
+| Variational Autoencoder | 0.7700 | n/a |
+| Physics-Informed VAE (Hybrid) | 0.9200 | n/a |
 
 (Higher is better; closer to the Real ceiling = more useful synthetic data.)
 
@@ -254,8 +254,8 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 | Engine | Coverage @ 90% (nominal 0.90) | Calibration Error |
 |---|---|---|
 | Physics-Informed Monte Carlo | 0.956 | 0.0763 |
-| Regression | 0.999 | 0.0391 |
-| Variational Autoencoder | 1.000 | 0.0627 |
+| Regression | 0.998 | 0.0409 |
+| Variational Autoencoder | 0.999 | 0.0567 |
 | Physics-Informed VAE (Hybrid) | 0.896 | **0.0244** |
 
 (Coverage closest to nominal and lowest calibration error = best-calibrated uncertainty.)
@@ -264,21 +264,21 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 
 ## Support-Aware Uncertainty (Near/Far Transfer)
 
-Same-model transfer over `region`: one conditional-VAE ensemble is trained per region, then queried for the **held-out same region (NEAR)** vs a **different region (FAR)**. A model that 'knows what it doesn't know' has ensemble **disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and coverage degrade. (From the latest `make loro` run.)
+Same-model transfer over `region`: one conditional-VAE ensemble is trained per region, then queried for the **held-out same region (NEAR)** vs a **different region (FAR)**. A model that 'knows what it doesn't know' has ensemble **disagreement** that widens for the unseen region (FAR > NEAR) while fidelity and coverage degrade. `coverage-conformal` recalibrates each interval's width on the NEAR held-out reals (target 0.90) and transfers that width off-support — it fixes NEAR coverage and partially closes the FAR gap (the residual is genuine distribution shift). (From the latest `make loro` run.)
 
-| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | corr FAR / NEAR |
-|---|---|---|---|
-| 0 | 0.0837 / 0.0667 | 0.961 / 0.978 | 0.508 / 0.940 |
-| 1 | 0.1264 / 0.0797 | 0.997 / 1.000 | 0.490 / 0.506 |
-| 2 | 0.1459 / 0.0694 | 0.992 / 1.000 | 0.573 / 0.799 |
-| 3 | 0.1249 / 0.0547 | 0.995 / 1.000 | 0.499 / 0.587 |
-| 4 | 0.1144 / 0.0734 | 0.988 / 1.000 | 0.551 / 0.654 |
-| 5 | 0.1288 / 0.0730 | 0.976 / 0.995 | 0.545 / 0.759 |
-| 6 | 0.1189 / 0.0672 | 0.987 / 1.000 | 0.464 / 0.407 |
-| 7 | 0.1038 / 0.0567 | 0.991 / 1.000 | 0.471 / 0.592 |
-| **MEAN** | 0.1184 / 0.0676 | 0.986 / 0.997 | 0.513 / 0.655 |
+| Train region | disagreement FAR / NEAR | coverage FAR / NEAR | coverage-conformal FAR / NEAR | corr FAR / NEAR |
+|---|---|---|---|---|
+| 0 | 0.1205 / 0.0761 | 0.960 / 1.000 | 0.844 / 0.919 | 0.517 / 0.962 |
+| 1 | 0.1155 / 0.0602 | 0.988 / 1.000 | 0.821 / 0.912 | 0.530 / 0.512 |
+| 2 | 0.1195 / 0.0931 | 0.989 / 1.000 | 0.820 / 0.913 | 0.584 / 0.810 |
+| 3 | 0.1127 / 0.0473 | 0.984 / 1.000 | 0.858 / 0.917 | 0.465 / 0.591 |
+| 4 | 0.1126 / 0.0732 | 0.988 / 1.000 | 0.816 / 0.916 | 0.583 / 0.685 |
+| 5 | 0.1229 / 0.0761 | 0.991 / 1.000 | 0.837 / 0.926 | 0.585 / 0.717 |
+| 6 | 0.1066 / 0.0499 | 0.991 / 1.000 | 0.872 / 0.911 | 0.422 / 0.500 |
+| 7 | 0.1113 / 0.0766 | 0.994 / 1.000 | 0.850 / 0.911 | 0.477 / 0.608 |
+| **MEAN** | 0.1152 / 0.0690 | 0.986 / 1.000 | 0.840 / 0.916 | 0.520 / 0.673 |
 
-Mean ensemble disagreement is **+75%** for unseen vs held-out same regions — widens off-support.
+Mean ensemble disagreement is **+67%** for unseen vs held-out same regions — widens off-support.
 
 ![Near/far transfer](../../results/banana_quality/figures/loro/loro_region.png)
 

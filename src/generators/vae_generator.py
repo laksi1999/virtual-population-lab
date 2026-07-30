@@ -29,7 +29,11 @@ class VAE(nn.Module):
         z = self.encoder(x)
 
         mu = z[:, :self.latent_dim]
-        logvar = z[:, self.latent_dim:]
+        # Clamp logvar to a safe range before exponentiating: on tiny datasets
+        # an unconstrained logvar can run away, making std = exp(0.5*logvar)
+        # explode and the whole population diverge (seen on n~40 safou). The
+        # bounds are wide enough never to bind on a well-behaved fit.
+        logvar = torch.clamp(z[:, self.latent_dim:], -8.0, 8.0)
 
         std = torch.exp(0.5 * logvar)
 

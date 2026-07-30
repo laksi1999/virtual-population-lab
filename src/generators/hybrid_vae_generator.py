@@ -55,7 +55,9 @@ class VAE(nn.Module):
         z = self.encoder(x)
 
         mu = z[:, :self.latent_dim]
-        logvar = z[:, self.latent_dim:]
+        # Clamp logvar before exponentiating so std = exp(0.5*logvar) can't run
+        # away on tiny datasets (see vae_generator for the failure mode).
+        logvar = torch.clamp(z[:, self.latent_dim:], -8.0, 8.0)
 
         std = torch.exp(0.5 * logvar)
 
@@ -148,7 +150,7 @@ def _decode_samples(vae, reference_batch, n_samples, latent_dim, prior_type):
     if prior_type == "aggregate":
         enc = vae.encoder(reference_batch)
         mu = enc[:, :latent_dim]
-        logvar = enc[:, latent_dim:]
+        logvar = torch.clamp(enc[:, latent_dim:], -8.0, 8.0)
         idx = torch.randint(0, reference_batch.shape[0], (n_samples,))
         std = torch.exp(0.5 * logvar[idx])
         z = mu[idx] + torch.randn(n_samples, latent_dim) * std

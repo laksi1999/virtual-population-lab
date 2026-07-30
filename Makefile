@@ -3,7 +3,7 @@ PIP		?= pip3.13
 CONFIG	?= apple_quality
 
 # The finalized datasets (keep in sync with src/configs/*.py).
-CONFIGS	= apple_quality banana_quality biofood_date_region biofood_safou_region
+CONFIGS	= apple_quality banana_quality biofood_date_region biofood_safou_region mango_composition
 
 venv:
 	$(PYTHON) -m venv venv

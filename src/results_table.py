@@ -20,6 +20,7 @@ DATASETS = {
     "banana_quality": "Banana (quality)",
     "biofood_date_region": "Date (nutrients)",
     "biofood_safou_region": "Safou (nutrients)",
+    "mango_composition": "Mango (Vit C)",
 }
 ENGINES = ["physics_mc", "regression", "vae", "hybrid_vae"]
 ENGINE_NAME = {"physics_mc": "Physics-MC", "regression": "Regression",

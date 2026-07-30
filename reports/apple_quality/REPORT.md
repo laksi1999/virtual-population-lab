@@ -1,6 +1,6 @@
 # Virtual Population Lab — Report
 
-_Auto-generated on 2026-07-18 21:51 from `apple_quality`. Re-run `make run CONFIG=apple_quality` to refresh._
+_Auto-generated on 2026-07-23 21:50 from `apple_quality`. Re-run `make run CONFIG=apple_quality` to refresh._
 
 ## Objective
 
@@ -180,15 +180,15 @@ constraint doesn't change any of them.
 | Engine | Correlation Distance (Euclidean) | Mean KS Statistic |
 |---|---|---|
 | Physics-Informed Monte Carlo | 0.9434 | 0.0467 |
-| Regression | 0.6763 | 0.0366 |
+| Regression | 0.7410 | 0.0335 |
 | Variational Autoencoder | 0.8392 | 0.0774 |
-| Physics-Informed VAE (Hybrid) | **0.4935** | **0.0237** |
+| Physics-Informed VAE (Hybrid) | **0.5330** | **0.0237** |
 
 (Lower is better for both metrics; bold = best.)
 
 ## Findings
 
-- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.4935)
+- Best **Correlation Distance (Euclidean)**: Physics-Informed VAE (Hybrid) (0.5330)
 - Best **Mean KS Statistic**: Physics-Informed VAE (Hybrid) (0.0237)
 
 Per-feature marginal fit (two-sample KS test, real vs. generated; lower ks_stat / higher p_value = closer):
@@ -204,13 +204,13 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|
-| Size | 0.0458 | 0.0377 | 0.0808 | **0.0223** |
-| Weight | 0.0715 | **0.0307** | 0.0862 | 0.0330 |
-| Sweetness | 0.0610 | 0.0337 | 0.0628 | **0.0278** |
-| Crunchiness | 0.0562 | 0.0283 | 0.1245 | **0.0245** |
-| Juiciness | 0.0298 | 0.0330 | 0.0688 | **0.0217** |
-| Ripeness | 0.0240 | 0.0532 | 0.0602 | **0.0222** |
-| Acidity | 0.0387 | 0.0400 | 0.0583 | **0.0147** |
+| Size | 0.0458 | 0.0357 | 0.0808 | **0.0223** |
+| Weight | 0.0715 | 0.0350 | 0.0862 | **0.0330** |
+| Sweetness | 0.0610 | **0.0270** | 0.0628 | 0.0278 |
+| Crunchiness | 0.0562 | 0.0312 | 0.1245 | **0.0245** |
+| Juiciness | 0.0298 | 0.0345 | 0.0688 | **0.0217** |
+| Ripeness | 0.0240 | 0.0287 | 0.0602 | **0.0222** |
+| Acidity | 0.0387 | 0.0425 | 0.0583 | **0.0147** |
 
 ## Feature Spread Comparison
 
@@ -218,13 +218,13 @@ Lower = closer to real; bold = best per feature.
 
 | Feature | Real Std | Physics-Informed Monte Carlo | Regression | Variational Autoencoder | Physics-Informed VAE (Hybrid) |
 |---|---|---|---|---|---|
-| Size | 1.927 | 2.007 (1.04x) | 1.956 (1.02x) | 1.543 (0.80x) | 1.926 (1.00x) |
-| Weight | 1.600 | 1.618 (1.01x) | 1.556 (0.97x) | 1.188 (0.74x) | 1.600 (1.00x) |
-| Sweetness | 1.954 | 1.944 (0.99x) | 1.859 (0.95x) | 1.691 (0.87x) | 1.935 (0.99x) |
-| Crunchiness | 1.411 | 1.393 (0.99x) | 1.351 (0.96x) | 0.885 (0.63x) | 1.396 (0.99x) |
-| Juiciness | 1.898 | 1.922 (1.01x) | 1.951 (1.03x) | 1.633 (0.86x) | 1.941 (1.02x) |
-| Ripeness | 1.883 | 1.859 (0.99x) | 1.750 (0.93x) | 1.587 (0.84x) | 1.868 (0.99x) |
-| Acidity | 2.117 | 2.157 (1.02x) | 2.014 (0.95x) | 1.772 (0.84x) | 2.104 (0.99x) |
+| Size | 1.927 | 2.007 (1.04x) | 1.906 (0.99x) | 1.543 (0.80x) | 1.926 (1.00x) |
+| Weight | 1.600 | 1.618 (1.01x) | 1.539 (0.96x) | 1.188 (0.74x) | 1.600 (1.00x) |
+| Sweetness | 1.954 | 1.944 (0.99x) | 1.894 (0.97x) | 1.691 (0.87x) | 1.935 (0.99x) |
+| Crunchiness | 1.411 | 1.393 (0.99x) | 1.339 (0.95x) | 0.885 (0.63x) | 1.396 (0.99x) |
+| Juiciness | 1.898 | 1.922 (1.01x) | 1.880 (0.99x) | 1.633 (0.86x) | 1.941 (1.02x) |
+| Ripeness | 1.883 | 1.859 (0.99x) | 1.888 (1.00x) | 1.587 (0.84x) | 1.868 (0.99x) |
+| Acidity | 2.117 | 2.157 (1.02x) | 2.004 (0.95x) | 1.772 (0.84x) | 2.104 (0.99x) |
 
 ## Generalization Check
 
@@ -233,9 +233,9 @@ Correlation distance for each engine's synthetic data against the train split it
 | Engine | Correlation Dist. (vs. Train) | Correlation Dist. (vs. Test) | Gap |
 |---|---|---|---|
 | Physics-Informed Monte Carlo | 0.9142 | 0.9434 | 0.0292 |
-| Regression | 0.6510 | 0.6763 | 0.0253 |
+| Regression | 0.7275 | 0.7410 | 0.0135 |
 | Variational Autoencoder | 0.7821 | 0.8392 | 0.0571 |
-| Physics-Informed VAE (Hybrid) | 0.3873 | 0.4935 | 0.1063 |
+| Physics-Informed VAE (Hybrid) | 0.3887 | 0.5330 | 0.1443 |
 
 ## Downstream Utility (TSTR)
 
@@ -244,10 +244,10 @@ Train-on-Synthetic, Test-on-Real for the `Quality` label: a RandomForest is trai
 | Trained on | Accuracy | ROC-AUC |
 |---|---|---|
 | **Real (TRTR ceiling)** | 0.8858 | 0.9600 |
-| Physics-Informed Monte Carlo | 0.7850 | 0.8615 |
-| Regression | 0.8283 | 0.9067 |
-| Variational Autoencoder | 0.7950 | 0.8866 |
-| Physics-Informed VAE (Hybrid) | 0.8667 | 0.9406 |
+| Physics-Informed Monte Carlo | 0.7600 | 0.8445 |
+| Regression | 0.8050 | 0.9032 |
+| Variational Autoencoder | 0.7967 | 0.8883 |
+| Physics-Informed VAE (Hybrid) | 0.8625 | 0.9425 |
 
 (Higher is better; closer to the Real ceiling = more useful synthetic data.)
 
@@ -258,7 +258,7 @@ Tests the *calibrated uncertainty* claim directly. For each feature, the central
 | Engine | Coverage @ 90% (nominal 0.90) | Calibration Error |
 |---|---|---|
 | Physics-Informed Monte Carlo | 0.904 | 0.0132 |
-| Regression | 0.885 | 0.0208 |
+| Regression | 0.887 | 0.0199 |
 | Variational Autoencoder | 0.815 | 0.0835 |
 | Physics-Informed VAE (Hybrid) | 0.901 | **0.0098** |
 
