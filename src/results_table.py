@@ -24,11 +24,13 @@ DATASETS = {
 }
 ENGINES = ["physics_mc", "regression", "vae", "hybrid_vae"]
 ENGINE_NAME = {"physics_mc": "Physics-MC", "regression": "Regression",
-               "vae": "VAE", "hybrid_vae": "Hybrid"}
-# summary_metrics.csv uses display names; map them back to engine keys.
+               "vae": "VAE", "hybrid_vae": "Physics-VAE"}
+# summary_metrics.csv uses display names; map them back to engine keys. The
+# parenthesised PI-VAE label is the one older CSVs were written with.
 DISPLAY_TO_KEY = {
     "Physics-Informed Monte Carlo": "physics_mc", "Regression": "regression",
-    "Variational Autoencoder": "vae", "Physics-Informed VAE (Hybrid)": "hybrid_vae",
+    "Variational Autoencoder": "vae", "Physics-Informed VAE": "hybrid_vae",
+    "Physics-Informed VAE (Hybrid)": "hybrid_vae",
 }
 
 

@@ -14,8 +14,8 @@ from sklearn.preprocessing import StandardScaler
 FIGURE_DPI = 400
 
 # Okabe-Ito palette: colorblind-safe, real vs. up to 7 generated methods.
-# Ordered for max contrast between the first few slots (blue/vermillion/green),
-# since that's what's actually in view with 3 engines.
+# Ordered for maximum contrast between the first few slots, which are the ones
+# in view with the four shipped engines.
 REAL_COLOR = "#333333"
 GENERATED_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9", "#F0E442"]
 
@@ -35,7 +35,7 @@ DISPLAY_NAMES = {
     "physics_mc": "Physics-Informed Monte Carlo",
     "regression": "Regression",
     "vae": "Variational Autoencoder",
-    "hybrid_vae": "Physics-Informed VAE (Hybrid)",
+    "hybrid_vae": "Physics-Informed VAE",
     "hybrid_vae_raw": "Physics-Informed VAE (uncalibrated)",
 }
 
@@ -119,10 +119,8 @@ def save_pca_scatter(real_df, generated, features, path):
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
 
-    # "Real" keeps the same alpha as the individual panels so it reads with
-    # the same clarity everywhere — only the *generated* colors drop to a
-    # lower alpha here, since they're the ones stacking on top of each
-    # other and alpha-blending into muddy intermediate colors.
+    # "Real" keeps the same alpha as the individual panels; only the generated
+    # colors drop to a lower alpha here, since they are the ones that stack.
     combined_ax = axes[len(projections)]
     combined_ax.scatter(real_proj[:, 0], real_proj[:, 1], s=SCATTER_SIZE, alpha=SCATTER_ALPHA_PAIR,
                          label="Real", color=REAL_COLOR)
@@ -296,12 +294,12 @@ def save_pvalue_heatmap(ks_table, path):
 
 def save_volcano_plot(ks_table, path):
     """
-    ks_stat (effect size) vs. -log10(p_value) (significance) — one point
-    per (feature, method). Combines both KS numbers in a single view
-    instead of two separate heatmaps; per-feature exact values are already
-    in the KS/p-value heatmaps, so points aren't individually labeled here
-    (7 features x 3 methods clustered tightly makes text unreadable) —
-    this plot is for the overall per-method pattern, not per-feature lookup.
+    ks_stat (effect size) vs. -log10(p_value) (significance) — one point per
+    (feature, method). Combines both KS numbers in a single view instead of two
+    separate heatmaps. Points are not individually labeled (features x methods
+    cluster too tightly for readable text) since the exact per-feature values are
+    already in the KS and p-value heatmaps; this plot shows the overall
+    per-method pattern.
     """
     plt.figure(figsize=(8, 6))
 
@@ -438,10 +436,8 @@ def run_evaluation(real_df, generated, features, figures_dir, results_dir):
     save_pca_scatter(real_df, generated, features, os.path.join(correlation_dir, "pca_real_vs_generated.png"))
     save_pca_individual_panels(real_df, generated, features, os.path.join(correlation_dir, "pca_individual.png"))
 
-    # Both DataFrames keep raw method keys/column names in memory (callers
-    # filter by them, e.g. ks_table[ks_table.method == "physics_mc"]) — only
-    # the CSV written to disk gets display names, since that's for people to
-    # read directly.
+    # Both DataFrames keep raw method keys and column names in memory, since
+    # callers filter by them; only the CSV written to disk gets display names.
     ks_table = marginal_ks_table(real_df, generated, features)
     _with_display_names(ks_table).to_csv(os.path.join(results_dir, "ks_marginals.csv"), index=False)
 

@@ -1,13 +1,13 @@
 """
-Supplementary §B / S6.2 — region-conditional physics underperforms pooling.
+Region-conditional physics underperforms pooling.
 
-Tests whether the subpopulation heterogeneity (per-region/cultivar slope
-differences) can be exploited: fit physics edges PER group + condition the VAE
-on group, vs the pooled Physics-VAE. Result: pooling wins at these per-group
-sample sizes (a bias-variance outcome).
+Tests whether the subpopulation heterogeneity (per-region or per-cultivar slope
+differences) can be exploited: fit physics edges per group and condition the VAE
+on group, versus the pooled Physics-VAE. Pooling wins at these per-group sample
+sizes — a bias-variance outcome.
 
 Compares, on the pooled held-out test set:
-  pooled-PVAE   the shipped hybrid (unconditional, one pooled edge set)   [baseline]
+  pooled-PVAE   the shipped PI-VAE (unconditional, one pooled edge set)   [baseline]
   region-VAE    CVAE conditioned on group, per-group calibration, NO physics
   region-PVAE   CVAE conditioned on group + PER-GROUP physics + per-group calibration
 
@@ -127,8 +127,9 @@ def run(name):
 
 
 def single_region_subset(cfg_name="biofood_date_region", region="UAE", seeds=(41, 42, 43, 44, 45)):
-    """Single-region subsetting: does restricting to the largest region beat pooling?
-    (supp_B) Runs the shipped Physics-VAE on that region only and reports corr dist."""
+    """Single-region subsetting: does restricting to the largest region beat
+    pooling? Runs the shipped Physics-VAE on that region only and reports
+    correlation distance."""
     cfg = load_config(cfg_name); F = cfg.FEATURES; G = cfg.LORO_GROUP
     df = load_data(cfg); df = df[df[G] == region].reset_index(drop=True)
     corr = []
@@ -146,7 +147,8 @@ def single_region_subset(cfg_name="biofood_date_region", region="UAE", seeds=(41
                         free_bits=cfg.VAE_FREE_BITS, calibrate_marginals=True)
         corr.append(correlation_euclidean_dist(te, g, F))
     print(f"\n{cfg_name} {region}-only (n={len(df)}): Physics-VAE corr dist = "
-          f"{np.mean(corr):.3f} ± {np.std(corr, ddof=1):.3f}  (vs pooled 0.53 -> subsetting is worse)")
+          f"{np.mean(corr):.3f} ± {np.std(corr, ddof=1):.3f}  "
+          f"(compare the pooled Physics-VAE row printed above)")
 
 
 def main():

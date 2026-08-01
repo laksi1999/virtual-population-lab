@@ -1,16 +1,14 @@
 """
-Banana quality dataset — reduced to the useful fruit-measurement features plus
-the quality label. Run with `make run CONFIG=banana_quality`.
+Banana quality dataset — reduced to the fruit-measurement features plus the
+quality label. Run with `make run CONFIG=banana_quality`.
 
-The categorical variety/region codes and the agronomy context (tree age, soil,
-rainfall, altitude) are dropped: they are label-encoded or only weakly related
-to the fruit's properties. What remains is 5 near-independent fruit measurements
-+ the quality label. This dataset has no valid causal graph (ripeness->sugar
-r~0), so it is the weak-structure / no-physics case: classical and mechanistic
-engines win joint structure, the hybrid wins marginals and downstream utility,
-and it gives the strongest near/far uncertainty widening.
+The categorical variety codes and the agronomy context (tree age, soil, rainfall,
+altitude) are dropped: they are label-encoded or only weakly related to the
+fruit's own properties. What remains is 5 near-independent fruit measurements
+plus the quality label. No reliable causal graph exists here (candidate edges
+such as ripeness->sugar have r ~ 0), so this is the no-physics case.
 
-`region` (real country codes 0-7) is kept only as the near/far grouping.
+`region` (country codes 0-7) is kept only as the near/far grouping.
 """
 from src.configs.base import *  # noqa: F401,F403 — re-exported as this module's own config values
 

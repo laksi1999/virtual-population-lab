@@ -1,8 +1,8 @@
 """
-Supplementary §B / S6.1 — no lever recovers a banana correlation "win".
+No lever recovers a banana correlation win.
 
-Sweeps the Physics-VAE latent dimension on Banana (near-independent features)
-across 10 seeds and compares to the Regression baseline. Confirms correlation
+Sweeps the Physics-VAE latent dimension on banana (near-independent features)
+across 10 seeds and compares to the regression baseline. Confirms correlation
 distance is pinned at the sampling-noise floor: no latent dim systematically
 beats the baseline, and KS/calibration/coverage are unmoved (set by calibration).
 

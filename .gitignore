@@ -10,5 +10,7 @@ __pycache__/
 
 # IDE
 .idea/
+
+# Local working notes and superseded material — not published
 _to_delete/
-# Private narrative docs — kept local, not published
+

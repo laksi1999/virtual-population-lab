@@ -29,9 +29,9 @@ class VAE(nn.Module):
         z = self.encoder(x)
 
         mu = z[:, :self.latent_dim]
-        # Clamp logvar to a safe range before exponentiating: on tiny datasets
-        # an unconstrained logvar can run away, making std = exp(0.5*logvar)
-        # explode and the whole population diverge (seen on n~40 safou). The
+        # Clamp logvar to a safe range before exponentiating: on very small
+        # datasets an unconstrained logvar can run away, making
+        # std = exp(0.5*logvar) explode and the whole population diverge. The
         # bounds are wide enough never to bind on a well-behaved fit.
         logvar = torch.clamp(z[:, self.latent_dim:], -8.0, 8.0)
 
@@ -78,14 +78,13 @@ def generate(
     standard normal prior, weighted by `beta`), plus a covariance-matching
     term weighted by `cov_weight`: the squared difference between the
     reconstructed batch's covariance matrix and the real batch's. The ELBO
-    alone has no direct incentive to get cross-feature correlations right —
-    it only rewards accurate per-point reconstruction — so this term gives
-    the model direct pressure toward the metric this project actually scores
-    correlation preservation on. `beta` is linearly annealed from 0 up to
-    its target value over the first `kl_warmup_frac` of training — without
-    this, the KL term can dominate before reconstruction has learned
-    anything, collapsing the model onto near-zero variance (i.e. generated
-    samples clustering tightly around the mean).
+    alone has no direct incentive to get cross-feature correlations right — it
+    only rewards accurate per-point reconstruction — so this term applies
+    direct pressure toward preserving joint structure. `beta` is linearly
+    annealed from 0 up to its target value over the first `kl_warmup_frac` of
+    training — without this, the KL term can dominate before reconstruction has
+    learned anything, collapsing the model onto near-zero variance (i.e.
+    generated samples clustering tightly around the mean).
 
     With `use_minibatch=True`, each epoch shuffles the data and takes one
     gradient step per `batch_size` chunk instead of one step over the whole

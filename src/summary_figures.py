@@ -1,15 +1,15 @@
 """
-Cross-dataset summary figures for the 4 finalized datasets. Reads the aggregated
-MULTI-SEED results (results/_summary/multiseed_metrics.csv and
+Cross-dataset summary figures for the five finalized datasets. Reads the
+aggregated multi-seed results (results/_summary/multiseed_metrics.csv and
 multiseed_nearfar.csv) so the figures show mean +/- standard deviation with error
-bars — matching insights.md and the paper tables — rather than a single seed.
-Regenerate those first with `python -m src.multiseed --seeds 41 42 43 44 45 --loro`.
+bars rather than a single seed. Regenerate those first with
+`python -m src.multiseed --seeds 41 42 43 44 45 --loro`.
 
-  fig1_leaderboard.png  — 4 engines x 4 datasets on correlation distance + KS (mean +/- s.d.)
+  fig1_leaderboard.png  — 4 engines x 5 datasets on correlation distance + KS (mean +/- s.d.)
   fig2_downstream.png   — TSTR accuracy per engine vs the real ceiling (apple, banana)
   fig3_nearfar.png      — near/far ensemble disagreement (uncertainty widens off-support)
 
-Palette: Okabe-Ito (colourblind-safe, validated). Hybrid = vermillion (hero).
+Palette: Okabe-Ito (colourblind-safe); colour is bound to engine, never to rank.
 """
 import os
 import matplotlib
@@ -21,7 +21,7 @@ import pandas as pd
 OUT = "results/_summary"
 os.makedirs(OUT, exist_ok=True)
 
-# fixed engine order + validated categorical colours (entity -> colour, never rank)
+# Fixed engine order and categorical colours.
 ENGINES = ["physics_mc", "regression", "vae", "hybrid_vae"]
 SHORT = {"physics_mc": "Physics-MC", "regression": "Regression",
          "vae": "VAE", "hybrid_vae": "Physics-VAE"}
@@ -78,7 +78,7 @@ _bars(a2, labels, ks_m, ks_s, "Marginal fit  (lower is better)", "Mean KS statis
 handles, leg = a1.get_legend_handles_labels()
 fig.legend(handles, leg, frameon=False, ncol=4, loc="upper center",
            bbox_to_anchor=(0.5, 0.925), fontsize=10)
-fig.suptitle(f"Engine leaderboard across the four datasets  (mean ± s.d. over {N_SEEDS} seeds)",
+fig.suptitle(f"Engine leaderboard across the five datasets  (mean ± s.d. over {N_SEEDS} seeds)",
              x=0.02, ha="left", fontsize=14, weight="bold")
 plt.tight_layout(rect=[0, 0, 1, 0.88])
 plt.savefig(f"{OUT}/fig1_leaderboard.png", dpi=300, bbox_inches="tight"); plt.close()
@@ -102,7 +102,7 @@ for ax, cfg in zip(axes, ["apple_quality", "banana_quality"]):
     ax.set_ylabel("Accuracy"); ax.set_title(DATASETS[cfg].replace("\n", " "), fontsize=12, weight="bold", loc="left")
     lo = min(m - s for _, m, s in ms)
     ax.set_ylim(lo * 0.95, (ceil + 0.05))
-fig.suptitle(f"Downstream utility (train-on-synthetic, test-on-real) — hybrid nearest the real ceiling "
+fig.suptitle(f"Downstream utility (train-on-synthetic, test-on-real) — Physics-VAE nearest the real ceiling "
              f"(mean ± s.d. over {N_SEEDS} seeds)",
              x=0.02, ha="left", fontsize=12.5, weight="bold")
 plt.tight_layout(rect=[0, 0, 1, 0.93])

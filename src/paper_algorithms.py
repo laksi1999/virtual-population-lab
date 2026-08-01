@@ -1,7 +1,7 @@
 """
-Model definitions for the paper (Dr. Onwude: "one algorithm/equation per baseline
-in the main manuscript" + "a separate detailed Physics-VAE algorithm and equations
-in the Supplementary"). Every equation mirrors the actual generator code:
+Model definitions for the paper: one equation block per baseline for the main
+text, plus the detailed Physics-VAE algorithm and equations for the
+supplementary. Every equation mirrors the actual generator code:
   physics_mc_generator, regression_generator, vae_generator, hybrid_vae_generator.
 
 Writes to results/_summary/:

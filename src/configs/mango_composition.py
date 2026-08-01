@@ -6,12 +6,12 @@ with three measured composition attributes: Vitamin C (mg/100g), titratable
 acidity TA (mg/100g), and soluble solids SSC (degrees Brix). (The source file
 also has ~1,500 NIR bands, not used here.)
 
-Honest scope: only 3 features, and they're near-independent (|r| < 0.2), so the
-correlation comparison isn't discriminative and there's no mechanistic causal
-graph (CAUSAL_GRAPH empty). The value is the leave-one-CULTIVAR-out transfer:
-generate an unseen mango cultivar's Vit C / acid / sugar profile from an
-ensemble trained on the others, and check fidelity + uncertainty near vs far.
-All four cultivars have >=18 samples, so all can be held out.
+Scope: 3 features, near-independent (|r| < 0.2), so the correlation comparison is
+not discriminative here and no mechanistic causal graph is asserted
+(CAUSAL_GRAPH empty). The transfer experiment is leave-one-cultivar-out:
+generate an unseen cultivar's Vitamin C / acidity / sugar profile from an
+ensemble trained on the others, and measure fidelity and uncertainty near vs
+far. All four cultivars have >=18 samples, so all can be held out.
 
 Run: make run CONFIG=mango_composition    (comparison + calibration)
      make loro CONFIG=mango_composition   (leave-one-cultivar-out transfer)

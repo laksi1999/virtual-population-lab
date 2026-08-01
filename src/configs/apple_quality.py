@@ -41,6 +41,6 @@ IS_PRE_SCALED = True
 LATENT_DIM = 7
 VAE_EPOCHS = 4000
 
-# Hybrid physics-informed VAE — marginal-matching weight, at the knee where
-# marginal fit and spread saturate while joint structure stays best-in-class.
+# Physics-informed VAE — marginal-matching weight, set where marginal fit
+# and per-feature spread saturate without degrading joint structure.
 VAE_MARGINAL_WEIGHT = 2.0

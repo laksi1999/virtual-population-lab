@@ -1,9 +1,9 @@
 """
 Uncertainty calibration via coverage.
 
-The project's hypothesis is that a good generator produces *calibrated
-uncertainty*, not just realistic point values — but the correlation/KS metrics
-don't test that. This does: for each feature, take the generated population's
+A useful generator produces calibrated uncertainty, not just realistic point
+values, which the correlation and KS metrics do not test. This does: for each
+feature, take the generated population's
 central interval at a nominal level (e.g. the 5th-95th percentile for 90%) and
 measure what fraction of the REAL held-out values actually fall inside. A
 well-calibrated generator covers real values at the nominal rate; one whose

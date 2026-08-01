@@ -1,8 +1,6 @@
 """
-Repeat the full evaluation across multiple random seeds and report every
-headline metric as mean +/- standard deviation, as required for the paper's
-statistical-rigour section (Dr. Onwude: "all results repeated across multiple
-random seeds and reported as mean +/- standard deviation").
+Repeat the full evaluation across multiple random seeds and report every headline
+metric as mean +/- standard deviation.
 
 For each (dataset, seed) it reruns exactly the main-pipeline generation
 (`src.main.generate_population`, so there is no metric-code drift) and recomputes
@@ -11,7 +9,7 @@ calibration error), and downstream utility (TSTR accuracy). With --loro it also
 reruns the same-model near/far transfer per seed.
 
 Usage:
-  python -m src.multiseed                                  # 4 datasets, seeds 41-45
+  python -m src.multiseed                                  # 5 datasets, seeds 41-45
   python -m src.multiseed biofood_safou_region --seeds 41 42
   python -m src.multiseed --loro --loro-seeds 41 42 43
 
@@ -232,7 +230,7 @@ def write_table1_tex(long_df, seeds, path):
 
     L = [
         r"\begin{table}[t]", r"\centering", r"\small",
-        r"\caption{Fidelity, uncertainty calibration, and downstream utility across the four "
+        r"\caption{Fidelity, uncertainty calibration, and downstream utility across the five "
         rf"datasets, reported as mean $\pm$ standard deviation over {len(seeds)} random seeds. "
         r"Lower is better for correlation distance, mean KS, and calibration error; higher for "
         r"TSTR accuracy. Best mean per column within a dataset is \textbf{bold}. TSTR ceiling = a "

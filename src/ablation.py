@@ -1,9 +1,8 @@
 """
-Physics-VAE loss-term ablation (Dr. Onwude: "a clear ablation study in
-supplementary, referenced in the main manuscript"). Starting from the full
-model, each term is switched off one at a time and the fidelity / calibration
-metrics are recomputed, across multiple seeds (mean +/- std). This isolates
-what each term contributes.
+Physics-VAE loss-term ablation. Starting from the full model, each term is
+switched off one at a time and the fidelity and calibration metrics are
+recomputed across multiple seeds (mean +/- std), isolating what each term
+contributes.
 
 Variants (one change from Full):
   Full            all terms on, with copula calibration
@@ -18,7 +17,7 @@ re-generation and the distributional/calibration metrics already isolate each
 term's role; the main results table carries TSTR.)
 
 Usage:
-  python -m src.ablation                                   # 4 datasets, seeds 41-43
+  python -m src.ablation                                   # 5 datasets, seeds 41-43
   python -m src.ablation biofood_safou_region --seeds 41 42 43
 
 Writes results/_summary/: ablation.csv, ablation.md, ablation.tex
@@ -136,9 +135,9 @@ def write_md(df, seeds, path):
          "mean KS, and calibration error; coverage@90 targets the nominal 0.90. Δ = change vs Full "
          "(positive = worse fidelity / calibration when the term is removed).", "",
          "Notes: `− physics` is a no-op on Banana/Mango (empty causal graph). Safou's Full already "
-         "uses λ_cov=0, so `− covariance` is a no-op there — an earlier ablation showed covariance "
-         "matching *hurt* Safou correlation (+0.08 to include it), because a 4×4 covariance from ~28 "
-         "rows is too noisy once the near-deterministic physics already pins the structure.", ""]
+         "uses λ_cov=0, so `− covariance` is a no-op there: covariance matching worsens Safou "
+         "correlation (+0.08 to include it), because a 4×4 covariance estimated from ~28 rows is too "
+         "noisy a target once the near-deterministic physics already pins the structure.", ""]
     for cfg, label in DATASETS.items():
         if not (df.config == cfg).any():
             continue
@@ -170,9 +169,9 @@ def write_tex(df, seeds, path):
          r"Lower is better for correlation distance, mean KS, and calibration error; coverage@90 "
          r"targets 0.90. `$-$ physics' is not applicable to Banana/Mango (empty causal graph). "
          r"Safou's Full already sets $\lambda_{\mathrm{cov}}{=}0$ (so `$-$ covariance' is a no-op "
-         r"there): an earlier ablation showed covariance matching \emph{hurt} correlation on Safou "
-         r"($+0.08$ to include it) because a $4{\times}4$ covariance from ${\sim}28$ rows is too "
-         r"noisy a target once the near-deterministic physics already pins the structure.}",
+         r"there): covariance matching \emph{worsens} correlation on Safou ($+0.08$ to include it) "
+         r"because a $4{\times}4$ covariance estimated from ${\sim}28$ rows is too noisy a target "
+         r"once the near-deterministic physics already pins the structure.}",
          r"\label{tab:ablation}",
          r"\begin{tabular}{ll cccc}", r"\toprule",
          r"Dataset & Variant & Corr.\ dist.\ $\downarrow$ & Mean KS $\downarrow$ & "

@@ -1,5 +1,5 @@
 """
-Supplementary §C / S5.4 — standalone conformal recalibration of transfer intervals.
+Standalone conformal recalibration of transfer intervals.
 
 The conformal recalibration is shipped inside src/evaluation/loro.py (columns
 coverage_*_conf). This script is the standalone prototype behind that code: for

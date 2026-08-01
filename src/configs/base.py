@@ -54,8 +54,8 @@ IS_PRE_SCALED = False
 
 # --- Pipeline mechanics — sensible defaults, override only if tuning calls for it ---
 
-# Fraction of the data held out as "real" individuals for evaluation and as
-# the base rows the regression generator conditions on (never used for fitting).
+# Fraction of the data held out as the "real" individuals every metric is scored
+# against. Never used for fitting, calibration, or causal-edge estimation.
 TEST_SIZE = 0.3
 
 # Whether to run the Train-on-Synthetic/Test-on-Real downstream-utility check
@@ -94,11 +94,10 @@ VAE_HIDDEN_DIM = 128
 VAE_DROPOUT = 0.0
 
 # Floor on KL cost per latent dimension (in nats) — 0.0 disables it (a valid
-# per-dim KL is already >= 0, so a zero floor is a no-op). Watch for the
-# posterior-collapse signature after a run: recon_loss plateauing at ~1.0 on
-# standardized data (no better than always predicting the mean) with KL
-# near zero. If that happens, try 0.5-2.0 rather than presetting this
-# defensively — an unneeded floor just wastes model capacity.
+# per-dim KL is already >= 0, so a zero floor is a no-op). The
+# posterior-collapse signature to watch for is recon_loss plateauing at ~1.0 on
+# standardized data (no better than always predicting the mean) with KL near
+# zero; 0.5-2.0 addresses it. An unneeded floor wastes model capacity.
 VAE_FREE_BITS = 0.0
 
 # Weight on the covariance-matching loss term: penalizes the squared
@@ -107,16 +106,16 @@ VAE_FREE_BITS = 0.0
 # correlations, which the reconstruction+KL ELBO alone doesn't reward.
 VAE_COV_WEIGHT = 1.0
 
-# Weight on the physics-consistency loss term, used only by the hybrid
+# Weight on the physics-consistency loss term, used only by the
 # physics-informed VAE (hybrid_vae_generator). Penalizes reconstructed
 # batches that violate the fitted linear-Gaussian relationship on each
 # CAUSAL_GRAPH edge — matching its slope, intercept, and real residual
 # spread — so the VAE is pushed onto the same mechanism the physics-informed
 # Monte Carlo generator samples, without collapsing feature variance. Set to
-# 0.0 to make the hybrid engine behave identically to the plain VAE.
+# 0.0 to make the physics-informed VAE behave identically to the plain VAE.
 VAE_PHYSICS_WEIGHT = 1.0
 
-# Weight on the marginal-matching loss term, used only by the hybrid
+# Weight on the marginal-matching loss term, used only by the
 # physics-informed VAE. The per-feature 1D Wasserstein distance between
 # samples drawn from the prior and the real batch — the differentiable
 # analogue of the KS statistic. The physics term constrains only causal
@@ -126,47 +125,39 @@ VAE_PHYSICS_WEIGHT = 1.0
 # included. Set to 0.0 to disable.
 VAE_MARGINAL_WEIGHT = 1.0
 
-# Hybrid physics-informed VAE — whether the covariance and physics constraints
+# Physics-informed VAE — whether the covariance and physics constraints
 # are applied to freshly generated rows (True) or to reconstructions of real
 # inputs (False). Constraining the generated population directly optimizes the
-# joint structure of what's actually sampled at generation; a 5-seed check
-# showed this robustly lowers correlation distance (mean 0.54 -> 0.46, with
-# non-overlapping min/max ranges) at no cost to KS, spread, or the train/test
-# gap. True by default.
+# joint structure of what is actually sampled at generation, which lowers
+# correlation distance at no cost to marginal fit, spread, or the train/test gap.
 VAE_CONSTRAIN_GENERATED = True
 
-# Hybrid physics-informed VAE — latent sampling at generation. "standard"
-# draws from the N(0, I) prior; "aggregate" draws from the aggregate posterior
-# over the training rows. "aggregate" was tested and rejected — it inflated
-# the train/test gap (it overfits the training encodings) with no KS or
-# correlation benefit — so "standard" is the default.
+# Physics-informed VAE — latent sampling at generation. "standard" draws
+# from the N(0, I) prior; "aggregate" draws from the aggregate posterior over the
+# training rows, which overfits the training encodings and widens the train/test
+# gap without improving fidelity, so "standard" is the default.
 VAE_PRIOR_TYPE = "standard"
 
-# Hybrid physics-informed VAE — empirical-copula marginal calibration. After
+# Physics-informed VAE — empirical-copula marginal calibration. After
 # generation, maps each feature onto the real training marginal at matching
-# quantiles (see hybrid_vae_generator._calibrate_marginals): the VAE supplies
-# the dependence structure, the margins come from the real empirical
-# distribution. A 5-seed check showed it drops mean KS from 0.040 to 0.022
-# (below physics-MC's 0.032), lifts spread from 0.97 to 0.999, and slightly
-# *improves* correlation distance — best-in-class on all three at once, no
-# trade-off. It injects the real empirical margins (as physics-MC does for its
-# roots), so a calibrated run is "learned dependence + real margins", not
-# purely learned — disclose that when reporting. True by default.
+# quantiles (see hybrid_vae_generator._calibrate_marginals): the VAE supplies the
+# dependence structure and the margins come from the real empirical distribution.
+# It improves marginal fit and per-feature spread and keeps values physically
+# valid. A calibrated run is "learned dependence + real margins" rather than
+# purely learned, which is reported as such.
 VAE_CALIBRATE_MARGINALS = True
 
-# When calibration is on, also report a second, *uncalibrated* hybrid variant
+# When calibration is on, also report a second, uncalibrated PI-VAE variant
 # ("hybrid_vae_raw") alongside it in the main comparison. The calibration
-# post-step is a monotonic per-feature remap onto the real margins: it preserves
-# rank (Spearman) correlation but NOT Pearson, and correlation_euclidean_dist
-# measures Pearson. On near-symmetric features (Pearson ~ Spearman) this is
-# harmless and calibration wins everything; on heavily *skewed* features the
-# remap visibly perturbs the Pearson correlation the metric scores, so the
-# calibrated hybrid can trail on correlation while still winning KS/calibration.
-# Turning this on trains the SAME model twice with a fixed seed and toggles only
-# the calibration post-step, so the two rows are a clean ablation of that
-# trade-off. Leave False on symmetric data (no trade-off to show); set True on
-# skewed data to report both the KS/calibration winner and the correlation
-# winner honestly. Ignored when VAE_CALIBRATE_MARGINALS is False.
+# post-step is a monotonic per-feature remap onto the real margins, so it
+# preserves rank (Spearman) correlation but not Pearson, which is what
+# correlation_euclidean_dist measures. On near-symmetric features the two agree
+# and calibration costs nothing; on heavily skewed features the remap perturbs
+# the Pearson correlation, so the calibrated PI-VAE can trail on correlation
+# while still leading on marginal fit and calibration. Enabling this trains the
+# same model twice with a fixed seed and toggles only the post-step, making the
+# two rows an ablation of that trade-off. Ignored when
+# VAE_CALIBRATE_MARGINALS is False.
 VAE_REPORT_UNCALIBRATED = False
 
 # Whether to train in shuffled mini-batches (adds stochastic noise to escape

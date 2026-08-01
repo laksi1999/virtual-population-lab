@@ -1,9 +1,8 @@
 """
-Physics-VAE loss-term documentation, generated for the paper (Dr. Onwude:
-"a table listing every loss term: scientific meaning, mathematical definition,
-and weight"). The term definitions mirror src.generators.hybrid_vae_generator
-exactly; the per-dataset weights are READ from the configs so they cannot drift
-from what the experiments actually used.
+Physics-VAE loss-term documentation: every term's scientific meaning,
+mathematical definition, and weight. The term definitions mirror
+src.generators.hybrid_vae_generator; the per-dataset weights are read from the
+configs, so they cannot drift from what the experiments actually used.
 
 Writes to results/_summary/:
   loss_terms.tex     — the loss-term table (meaning / math / weight)   [supplementary]
@@ -192,7 +191,8 @@ def write_hyperparams_tex(rows):
     L = [
         r"\begin{table}[t]", r"\centering", r"\small",
         r"\caption{Per-dataset Physics-VAE loss weights and training hyperparameters, as used in "
-        r"all reported runs. $\lambda_{\mathrm{phys}}$ has no effect on Banana (empty causal graph). "
+        r"all reported runs. $\lambda_{\mathrm{phys}}$ has no effect on Banana or Mango, whose "
+        r"causal graphs are empty. "
         r"Every value is a training-only choice; no evaluation data informs any prior, weight, or "
         r"preprocessing statistic.}",
         r"\label{tab:hyperparams}",
@@ -214,7 +214,7 @@ def write_hyperparams_md(rows):
     L = ["## Per-dataset Physics-VAE weights & hyperparameters", "",
          "(Read directly from the configs; every value is a training-only choice — no evaluation "
          "data informs any prior, weight, or preprocessing statistic. λ_phys has no effect on "
-         "Banana, whose causal graph is empty.)", "",
+         "Banana or Mango, whose causal graphs are empty.)", "",
          "| Dataset | λ_cov | λ_phys | λ_marg | β | free-bits c | latent d_z | hidden | epochs | causal edges |",
          "|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:

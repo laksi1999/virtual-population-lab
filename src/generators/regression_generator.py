@@ -5,20 +5,19 @@ from sklearn.ensemble import RandomForestRegressor
 
 def generate(train_df, features, n_samples=1000):
     """
-    For each feature, fits one RandomForestRegressor (on train_df) predicting
-    it from the other features. Synthetic rows are built from a base apple's
-    other features plus noise, so outputs vary instead of collapsing to a
+    For each feature, fits one RandomForestRegressor (on train_df) predicting it
+    from the other features. Synthetic rows are built from a base row's
+    prediction plus noise, so outputs vary instead of collapsing to a
     deterministic point estimate.
 
     Both the base rows and the residual noise come from out-of-bag (OOB)
-    predictions rather than a held-out split. A random forest bags each tree on
-    a bootstrap sample, so ~1/3 of the trees never saw any given training row;
-    `oob_prediction_` averages only those trees, giving a leakage-free
-    prediction for every training row for free. That lets this generator seed
-    itself entirely from train_df — never touching the evaluation set — exactly
-    like the other engines, with no memorization leakage and no data sacrificed
-    to a separate base split. It also makes the residuals honest (out-of-sample
-    rather than overfit in-sample), so the bootstrapped noise reflects real
+    predictions rather than a held-out split. A random forest bags each tree on a
+    bootstrap sample, so roughly a third of the trees never saw any given
+    training row; `oob_prediction_` averages only those trees, giving a
+    leakage-free prediction for every training row. That lets this generator seed
+    itself entirely from train_df, never touching the evaluation set, with no
+    data sacrificed to a separate base split. It also makes the residuals
+    out-of-sample rather than in-sample, so the bootstrapped noise reflects
     predictive uncertainty instead of understating it.
     """
     train_df = train_df.reset_index(drop=True)
@@ -32,8 +31,6 @@ def generate(train_df, features, n_samples=1000):
         model = RandomForestRegressor(n_estimators=100, oob_score=True, bootstrap=True)
         model.fit(train_df[inputs], train_df[target])
 
-        # OOB prediction for each training row: averaged over only the trees
-        # that didn't train on it, so it's leakage-free without a held-out set.
         oob_predictions[target] = model.oob_prediction_
         residuals[target] = train_df[target].values - model.oob_prediction_
 

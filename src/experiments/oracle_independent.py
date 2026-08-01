@@ -1,9 +1,9 @@
 """
-Supplementary §A / S6.1 — oracle analysis on independent-Gaussian data.
+Oracle analysis on independent-Gaussian data.
 
 Shows that on data with no exploitable dependence structure, Physics-MC (which
 with an empty graph reduces to an independent-Gaussian sampler) sits on the
-oracle floor and Physics-VAE ties it — i.e. Banana/Mango being co-best on
+oracle floor and Physics-VAE ties it — i.e. banana and mango being co-best on
 fidelity is the ceiling the data allows, not a shortfall.
 
 Run from repo root:  python -m src.experiments.oracle_independent

@@ -14,16 +14,13 @@ def _calibrate_marginals(generated, real):
     Empirical-copula marginal calibration. Replaces each generated feature's
     values with the real values at matching quantiles: rank the generated
     column, read those quantiles off the real column's empirical distribution,
-    and substitute. Because the substitution is monotonic in the generated
-    ranks, the model's learned dependence structure (rank/Spearman correlation)
-    is preserved, while every marginal is forced to match the real empirical
-    marginal essentially exactly.
+    and substitute. The substitution is monotonic in the generated ranks, so the
+    learned rank (Spearman) dependence is preserved while every marginal is
+    forced to match the real empirical marginal almost exactly — the
+    copula-synthesis pattern of learned dependence with real margins.
 
-    This is the copula-synthesis pattern — learned dependence, real margins —
-    and mirrors what the physics-informed Monte Carlo generator already does
-    for its root variables (sampling them from the real marginal), extended
-    here to every feature. `real` is the training reference the VAE was fit on,
-    so no evaluation data is used.
+    `real` is the training reference the VAE was fit on, so no evaluation data
+    is used.
     """
     calibrated = np.empty_like(generated)
     n = generated.shape[0]
@@ -55,8 +52,9 @@ class VAE(nn.Module):
         z = self.encoder(x)
 
         mu = z[:, :self.latent_dim]
-        # Clamp logvar before exponentiating so std = exp(0.5*logvar) can't run
-        # away on tiny datasets (see vae_generator for the failure mode).
+        # Clamp logvar before exponentiating so std = exp(0.5*logvar) cannot run
+        # away on very small datasets. The bounds are wide enough never to bind
+        # on a well-behaved fit.
         logvar = torch.clamp(z[:, self.latent_dim:], -8.0, 8.0)
 
         std = torch.exp(0.5 * logvar)
@@ -77,10 +75,10 @@ def _fit_edges(x, features, causal_graph):
     """
     For each (parent, child) edge, fit child ~ parent on the real matrix `x`
     (the same space the VAE trains in) and return the mechanistic constants
-    (slope, intercept, residual variance) plus the column indices. These are
-    exactly the linear-Gaussian conditionals the physics-informed Monte Carlo
-    generator samples from — here they become a differentiable constraint on
-    the VAE instead of a sampler.
+    (slope, intercept, residual variance) plus the column indices. These are the
+    same linear-Gaussian conditionals the physics-informed Monte Carlo generator
+    samples from; here they become a differentiable constraint on the VAE
+    instead of a sampler.
     """
     index = {name: i for i, name in enumerate(features)}
     edges = []
@@ -115,17 +113,14 @@ def _marginal_loss(generated, real):
     Per-feature squared 1D Wasserstein distance: sort each column of the
     generated and real batches and take the mean squared difference between
     the two sorted sequences. This is the differentiable form of what the KS
-    test measures — it pulls each generated feature's whole empirical
+    test measures: it pulls each generated feature's whole empirical
     distribution (shape, spread, tails) onto real, not just its first two
     moments.
 
-    It exists because the physics term only constrains parent->child *edges*;
-    the causal graph's root variables have no constraint on their own
-    marginal, so the VAE tends to compress them (the exact reason the plain
-    physics-informed VAE trails physics-MC on marginal fit, since physics-MC
-    draws roots straight from their real marginal). Applying this to samples
-    drawn from the prior shapes the marginals of the actual generated
-    population, roots included.
+    The physics term constrains only parent->child edges, leaving the causal
+    graph's root variables free to be compressed by the VAE. Applying this term
+    to samples drawn from the prior shapes the marginals of the generated
+    population, root variables included.
     """
     gen_sorted, _ = torch.sort(generated, dim=0)
     real_sorted, _ = torch.sort(real, dim=0)
@@ -136,16 +131,14 @@ def _decode_samples(vae, reference_batch, n_samples, latent_dim, prior_type):
     """
     Decode `n_samples` synthetic rows. With prior_type="standard" the latents
     are drawn from the N(0, I) prior (the textbook VAE generator). With
-    prior_type="aggregate" they are drawn from the *aggregate posterior* — the
+    prior_type="aggregate" they are drawn from the aggregate posterior — the
     mixture (1/N) sum_i N(mu_i, sigma_i^2) over the encoded reference rows,
     sampled by picking a random reference row and reparameterizing from its
-    posterior. That keeps the latents in the region the decoder actually
-    learned to map to data, sidestepping the "prior hole" mismatch a
-    standard-normal draw can fall into (where the aggregate posterior doesn't
-    fill the prior, so prior samples decode to off-distribution rows and
-    inflate both KS and correlation error). Gradients flow through the encoder
-    (aggregate case) and decoder, so this is usable inside the training loss
-    as well as for final generation.
+    posterior. That keeps the latents in the region the decoder learned to map to
+    data, avoiding the prior-hole mismatch a standard-normal draw can fall into
+    when the aggregate posterior does not fill the prior. Gradients flow through
+    the encoder (aggregate case) and decoder, so this is usable inside the
+    training loss as well as for final generation.
     """
     if prior_type == "aggregate":
         enc = vae.encoder(reference_batch)
@@ -168,15 +161,15 @@ def _physics_loss(batch, edges):
     - `mean(resid)^2`         — intercept/bias: residuals centered on the line.
     - `cov(resid, parent)^2`  — slope: residuals uncorrelated with the parent
                                 (a wrong slope leaves parent-correlated residual).
-    - `(var(resid) - resid_var)^2` — the *physical* noise level: penalizes a
+    - `(var(resid) - resid_var)^2` — the physical noise level: penalizes a
                                 conditional spread that is too tight (the classic
                                 VAE variance-collapse failure) as much as one too
                                 loose, so the physics term defends spread rather
                                 than suppressing it.
 
-    Returns 0 when there are no edges (an empty causal graph — e.g. a dataset
-    with no sensible mechanistic structure, such as NIR spectra), in which case
-    the hybrid reduces to a calibrated VAE with the covariance term.
+    Returns 0 when there are no edges (an empty causal graph, i.e. a dataset with
+    no reliable mechanistic structure), in which case the physics-informed VAE
+    reduces to a calibrated VAE with the covariance term.
     """
     total = batch.new_zeros(())
     if not edges:
@@ -225,74 +218,57 @@ def generate(
     free_bits=0.0,
 ):
     """
-    A hybrid physics-informed VAE: the same generative model as the plain
-    VAE, plus a physics-consistency loss that injects the caller-supplied
-    causal graph directly into training. This is the bridge between the two
-    other engines — it keeps the VAE's fully data-driven strengths (a learned
+    The physics-informed VAE (PI-VAE): the same generative model as the plain
+    VAE, plus a physics-consistency loss that injects the caller-supplied causal
+    graph into training. It keeps the VAE's data-driven strengths (a learned
     latent joint, novel-individual sampling, no handcrafted marginals) while
-    borrowing the physics-informed Monte Carlo generator's one piece of real
-    domain knowledge: the fitted linear-Gaussian relationship on each causal
-    edge.
+    borrowing the physics-informed Monte Carlo generator's domain knowledge: the
+    fitted linear-Gaussian relationship on each causal edge.
 
     Each (parent, child) edge in `causal_graph` is fit once on the real data
-    (slope, intercept, residual variance — the identical conditionals the
-    physics-MC generator samples). Those constants become a differentiable
-    penalty (see `_physics_loss`) added to the loss, weighted by
-    `physics_weight`, that pushes every reconstructed batch onto the
-    mechanistic relationships while matching their real residual spread — so
-    the constraint guides the generative manifold toward physically
-    consistent samples without re-introducing the VAE's variance-shrinkage
-    tendency.
+    (slope, intercept, residual variance — the same conditionals the physics-MC
+    generator samples). Those constants become a differentiable penalty (see
+    `_physics_loss`), weighted by `physics_weight`, that pushes each batch onto
+    the mechanistic relationships while matching their real residual spread, so
+    the constraint guides the generative manifold toward physically consistent
+    samples without re-introducing variance shrinkage.
 
-    Everything else matches the plain VAE. Trains on `x` (expected already
-    reasonably scaled) and samples `n_samples` rows from the prior; pass a
-    fitted `scaler` only if `x` needs inverse-transforming back to source
-    units. Loss is the standard VAE ELBO (reconstruction MSE + analytic KL to
-    the standard-normal prior, `beta` linearly annealed from 0 over the first
-    `kl_warmup_frac` of training to avoid posterior collapse), plus the
-    covariance-matching term (`cov_weight`) that rewards preserving the full
-    correlation matrix, plus the physics term (`physics_weight`) that rewards
-    honoring the causal graph specifically. `cov_weight` shapes the whole
-    covariance structure from data; `physics_weight` anchors the particular
-    mechanistic edges an expert asserts — set `physics_weight=0.0` to recover
-    the plain VAE exactly.
+    Trains on `x` (expected already reasonably scaled) and samples `n_samples`
+    rows from the prior; pass a fitted `scaler` only if `x` needs
+    inverse-transforming back to source units. Loss is the standard VAE ELBO
+    (reconstruction MSE + analytic KL to the standard-normal prior, `beta`
+    linearly annealed from 0 over the first `kl_warmup_frac` of training to avoid
+    posterior collapse), plus a covariance-matching term (`cov_weight`) that
+    rewards preserving the full correlation matrix, plus the physics term
+    (`physics_weight`). `cov_weight` shapes the whole covariance structure from
+    data; `physics_weight` anchors the specific mechanistic edges an expert
+    asserts. Set `physics_weight=0.0` to recover the plain VAE.
 
     A fourth term, weighted by `marginal_weight`, is the per-feature 1D
     Wasserstein distance (see `_marginal_loss`) between samples drawn from the
-    prior and the real batch. The physics term only constrains parent->child
-    edges, leaving the causal graph's *root* variables free to be compressed
-    by the VAE — the main reason marginal fit otherwise trails physics-MC,
-    which samples roots straight from their real marginal. This term shapes
-    every generated feature's whole distribution onto real, roots included;
-    set `marginal_weight=0.0` to disable it.
+    prior and the real batch. It shapes every generated feature's whole
+    distribution onto real, including the causal-graph root variables that the
+    physics term leaves unconstrained; set `marginal_weight=0.0` to disable it.
 
-    `prior_type` chooses how latents are drawn at generation (and for the
-    generated-sample loss terms): "standard" samples the N(0, I) prior;
+    `prior_type` chooses how latents are drawn at generation and for the
+    generated-sample loss terms: "standard" samples the N(0, I) prior,
     "aggregate" samples the aggregate posterior over the training rows (see
-    `_decode_samples`), which keeps samples on the region of latent space the
-    decoder actually learned and avoids the prior-hole mismatch that inflates
-    both KS and correlation error when the aggregate posterior doesn't fill
-    the prior.
+    `_decode_samples`).
 
-    `constrain_generated` routes the covariance and physics terms onto a batch
-    of freshly generated rows instead of the reconstructions — so those
-    constraints shape the population that's actually sampled at generation,
-    not just the model's reconstruction of real inputs. The default (False)
-    keeps them on reconstructions, matching the plain VAE's covariance-term
-    convention.
+    `constrain_generated` routes the covariance and physics terms onto a batch of
+    freshly generated rows instead of the reconstructions, so those constraints
+    shape the population actually sampled at generation. The default (False)
+    keeps them on reconstructions, matching the plain VAE's convention.
 
-    `calibrate_marginals` applies an empirical-copula post-step (see
-    `_calibrate_marginals`): after generation, each feature is mapped onto the
-    real training marginal at matching quantiles, forcing every marginal to
-    match real almost exactly while preserving the learned rank-correlation
-    structure. It injects the real empirical margins (like physics-MC does for
-    its roots), so a run using it should be described as marginal-calibrated
-    rather than purely learned. Default False.
+    `calibrate_marginals` applies the empirical-copula post-step (see
+    `_calibrate_marginals`): each feature is mapped onto the real training
+    marginal at matching quantiles, forcing every marginal to match real almost
+    exactly while preserving the learned rank dependence. A run using it is
+    marginal-calibrated rather than purely learned. Default False.
 
     `use_minibatch`, `batch_size`, `patience`, `hidden_dim`, `dropout`, and
-    `free_bits` behave exactly as in the plain VAE generator — see its
-    docstring for the capacity/collapse/early-stopping trade-offs; the causal
-    constraint doesn't change any of them.
+    `free_bits` behave as in the plain VAE generator — see its docstring for the
+    capacity, collapse, and early-stopping trade-offs.
     """
     x = np.asarray(x, dtype=np.float32)
     edges = _fit_edges(x, features, causal_graph)
@@ -335,10 +311,8 @@ def generate(
             kl_loss = torch.mean(torch.sum(kl_per_dim, dim=1))
 
             # A batch of freshly generated rows, drawn the same way final
-            # generation is (prior_type) — needed by the marginal term always,
-            # and by the covariance/physics terms when constrain_generated
-            # routes them onto the generated population instead of the
-            # reconstructions.
+            # generation is: always needed by the marginal term, and by the
+            # covariance/physics terms when constrain_generated is set.
             if marginal_weight > 0 or constrain_generated:
                 gen = _decode_samples(vae, batch, batch.shape[0], latent_dim, prior_type)
 
@@ -347,9 +321,6 @@ def generate(
             physics_loss = _physics_loss(cov_target, edges)
 
             if marginal_weight > 0:
-                # Shape the marginals of the *generated* distribution, not just
-                # reconstructions — that's what the KS test scores, and where
-                # the causal-graph roots get compressed.
                 marginal_loss = _marginal_loss(gen, batch)
             else:
                 marginal_loss = torch.zeros((), device=recon.device)
@@ -407,9 +378,7 @@ def generate(
         generated = _decode_samples(vae, x_tensor, n_samples, latent_dim, prior_type).numpy()
 
     if calibrate_marginals:
-        # Map each feature onto the real empirical marginal while keeping the
-        # learned rank structure (see _calibrate_marginals). Done in x-space
-        # (before any inverse-transform), against the training reference x.
+        # In x-space, before any inverse-transform, against the training data.
         generated = _calibrate_marginals(generated, x)
 
     if scaler is not None:

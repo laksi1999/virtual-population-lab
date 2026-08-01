@@ -1,10 +1,9 @@
 """
-Same-model near/far transfer evaluation ("leave-one-group-out" by name, but the
-clean same-model design).
+Same-model near/far transfer evaluation (named "leave-one-group-out" for its
+grouping, but with a same-model design).
 
-Tests the capability that distinguishes a generative virtual-population model
-from a descriptive comparison: can it generate a realistic population for a
-condition it saw little/none of, and does its uncertainty widen when it does?
+Tests whether the model can generate a realistic population for a condition it
+saw little or none of, and whether its uncertainty widens when it does.
 
 For each group big enough to hold part of it out (a "train region"):
 
@@ -14,11 +13,10 @@ For each group big enough to hold part of it out (a "train region"):
   3. FAR  (extrapolation): with the SAME ensemble, generate each *other* region's
      condition and score against that region's real rows. Unseen condition.
 
-Because NEAR and FAR come from the *same* trained models (only the queried
-condition changes), the disagreement difference isolates the unseen-condition
-effect — unlike the older train-all-vs-train-all-but-one design, whose NEAR and
-FAR used different training sets and gave a noisy signal. Reported per train
-region plus a MEAN row; the headline is FAR-vs-NEAR ensemble disagreement.
+Because NEAR and FAR come from the same trained models, with only the queried
+condition changing, the disagreement difference isolates the unseen-condition
+effect. Reported per train region plus a MEAN row; the headline is FAR-vs-NEAR
+ensemble disagreement.
 
 Metrics vs the scored real rows: correlation distance + mean KS (fidelity),
 coverage@90 (do the intervals still cover real?), and ensemble disagreement
@@ -39,7 +37,7 @@ from src.generators import conditional_vae_generator as cvae
 
 FIGURE_DPI = 400
 
-# Same-model near/far hyperparameters (validated on banana/date/safou).
+# Same-model near/far hyperparameters, shared across every dataset.
 K_ENSEMBLE = 5      # ensemble members — their disagreement is the uncertainty signal
 N_GEN = 400         # samples per member per queried condition
 EPOCHS = 1200
@@ -115,10 +113,10 @@ def _conf_cov(gen, y_eval, shat):
     return float(np.mean((y_eval >= lo) & (y_eval <= hi)))
 
 
-# coverage_*_conf = conformal-recalibrated coverage: the per-feature interval width
-# is calibrated on the NEAR held-out reals (target 0.90) and the SAME width is
-# transferred off-support (FAR). NEAR conf should reach ~0.90 in-region; the FAR
-# conf gap that remains is genuine distribution shift (see SUPPLEMENTARY.md S5.4).
+# coverage_*_conf = conformal-recalibrated coverage: the per-feature interval
+# width is calibrated on the NEAR held-out reals (target 0.90) and the same width
+# is transferred off-support (FAR). NEAR conf should reach ~0.90 in-region; the
+# remaining FAR conf gap is genuine distribution shift.
 _SCHEMA = ["group", "n", "corr_far", "corr_near", "ks_far", "ks_near",
            "coverage_far", "coverage_near", "coverage_far_conf", "coverage_near_conf",
            "disagreement_far", "disagreement_near"]
@@ -126,11 +124,10 @@ _SCHEMA = ["group", "n", "corr_far", "corr_near", "ks_far", "ks_near",
 
 def leave_one_group_out(df, all_features, group_col):
     """
-    Same-model near/far over every train-region (a group big enough to split).
-    Returns a DataFrame with one row per train region plus a final 'MEAN' row;
-    columns match the historical schema (corr/ks/coverage/disagreement _far/_near)
-    with the same-model semantics: near = held-out same-region, far = other
-    regions from the same ensemble.
+    Same-model near/far over every train region (a group big enough to split).
+    Returns a DataFrame with one row per train region plus a final 'MEAN' row,
+    with columns corr/ks/coverage/disagreement suffixed _far/_near: near =
+    held-out same region, far = other regions from the same ensemble.
     """
     features = [f for f in all_features if f != group_col]
     all_groups = sorted(df[group_col].unique())

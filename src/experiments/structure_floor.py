@@ -1,11 +1,12 @@
 """
-Supplementary §B / S6.1–S6.2 — correlation noise floor and subpopulation heterogeneity.
+Correlation noise floor and subpopulation heterogeneity.
 
-Reproduces:
-  (1) the correlation-distance noise floor on Banana (real train-vs-test and
-      two-random-halves) — shows independent-feature datasets are pinned at the floor;
-  (2) per-group OLS slope / correlation heterogeneity for Date (regions) and Mango
-      (cultivars) — shows why a single pooled causal edge is a compromise.
+Reports:
+  (1) the correlation-distance noise floor on banana (real train-vs-test and
+      two random halves) — shows independent-feature datasets are pinned at the
+      floor;
+  (2) per-group OLS slope and correlation heterogeneity for date (regions) and
+      mango (cultivars) — shows why a single pooled causal edge is a compromise.
 
 Run from repo root:  python -m src.experiments.structure_floor
 """
@@ -26,7 +27,7 @@ def noise_floor(cfg_name="banana_quality", seeds=range(41, 51)):
         tt.append(correlation_euclidean_dist(tr, te, F))
         h1, h2 = train_test_split(df, test_size=0.5, random_state=s)
         hh.append(correlation_euclidean_dist(h1, h2, F))
-    print(f"\n[{cfg_name}] correlation-distance noise floor (features {'independent' if True else ''}):")
+    print(f"\n[{cfg_name}] correlation-distance noise floor:")
     print(f"  real train vs real test : {np.mean(tt):.3f} ± {np.std(tt, ddof=1):.3f}  "
           f"(range {min(tt):.3f}-{max(tt):.3f})")
     print(f"  two random halves        : {np.mean(hh):.3f} ± {np.std(hh, ddof=1):.3f}")

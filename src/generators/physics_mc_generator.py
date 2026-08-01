@@ -29,10 +29,9 @@ def generate(df, features, causal_graph, root_variables, n_samples=1000):
     ancestral Monte Carlo sampling (this function) is exact — there's no
     intractable distribution to approximate, so no need for MCMC.
 
-    The causal structure and roots are dataset knowledge supplied by the
-    caller (see src/configs/apple_quality.py) — this function has no
-    dataset-specific assumptions baked in, so it works unchanged for a
-    different set of features/relationships.
+    The causal structure and roots are dataset knowledge supplied by the caller
+    (see src/configs/) — this function has no dataset-specific assumptions baked
+    in, so it works unchanged for a different set of features and relationships.
     """
     generated = {}
 

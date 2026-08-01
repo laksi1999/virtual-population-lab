@@ -12,9 +12,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-# Reuse the hybrid engine's physics machinery so the conditional VAE can carry
-# the SAME causal-graph physics loss — the two capabilities (conditioning,
-# physics) are orthogonal and here we combine them.
+# Reuse the physics-informed VAE's machinery so the conditional VAE can carry
+# the same causal-graph physics loss.
 from src.generators.hybrid_vae_generator import _fit_edges, _physics_loss
 
 
@@ -53,11 +52,11 @@ def train(x, cond, latent_dim, epochs, beta=1.0, hidden_dim=128, free_bits=0.0,
     conventions of the other VAE engines. Returns the trained model.
 
     If `physics_weight > 0`, a causal-graph physics-consistency term is added
-    (identical to the hybrid engine's): each edge's linear-Gaussian conditional
-    is fit ONCE on the training rows `x` (the seen conditions), then penalized on
-    the reconstructions. The assumption — and the thing the transfer experiment
-    tests — is that the fitted law is UNIVERSAL across conditions, so anchoring
-    the decoder to it should carry the correct structure to an unseen condition.
+    (identical to the physics-informed VAE's): each edge's linear-Gaussian conditional
+    is fit once on the training rows `x` (the seen conditions), then penalized on
+    the reconstructions. The assumption — and what the transfer experiment tests
+    — is that the fitted law is universal across conditions, so anchoring the
+    decoder to it should carry the correct structure to an unseen condition.
     `features` and `causal_graph` must be given when physics_weight > 0.
     """
     torch.manual_seed(seed)
@@ -70,11 +69,10 @@ def train(x, cond, latent_dim, epochs, beta=1.0, hidden_dim=128, free_bits=0.0,
     if physics_weight > 0 and causal_graph:
         # Fit the causal-edge conditionals on the seen (training) rows.
         edges = _fit_edges(np.asarray(x, dtype=np.float32), features, causal_graph)
-        # If a target (unseen) condition is given, we also constrain the physics
-        # of samples GENERATED for that condition each epoch — this is what
-        # actually forces the unseen-region output onto the universal law
-        # (constraining reconstructions of the seen region alone barely moves
-        # the unseen condition's decoder path).
+        # If a target (unseen) condition is given, also constrain the physics of
+        # samples generated for that condition each epoch: constraining
+        # reconstructions of the seen condition alone barely moves the unseen
+        # condition's decoder path.
         if target_cond is not None:
             tgt_c = torch.FloatTensor(np.tile(target_cond, (x.shape[0], 1)))
 
@@ -94,9 +92,9 @@ def train(x, cond, latent_dim, epochs, beta=1.0, hidden_dim=128, free_bits=0.0,
             # Physics on the reconstructions of the seen rows...
             phys = _physics_loss(recon, edges)
             if tgt_c is not None:
-                # ...and, crucially, on freshly generated samples for the UNSEEN
-                # target condition (prior draw + target one-hot), so the law is
-                # imposed exactly where we will extrapolate.
+                # ...and on freshly generated samples for the unseen target
+                # condition (prior draw + target one-hot), so the law is imposed
+                # where the model extrapolates.
                 z = torch.randn(x_t.shape[0], latent_dim)
                 gen_tgt = model.decoder(torch.cat([z, tgt_c], dim=1))
                 phys = phys + _physics_loss(gen_tgt, edges)

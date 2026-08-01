@@ -31,8 +31,8 @@ ENGINE_MODULES = {
     "regression": regression_generator,
     "vae": vae_generator,
     "hybrid_vae": hybrid_vae_generator,
-    # Optional uncalibrated hybrid ablation (only present when a config sets
-    # VAE_REPORT_UNCALIBRATED); shares the hybrid module for methodology text.
+    # Optional uncalibrated PI-VAE ablation, present only when a config sets
+    # VAE_REPORT_UNCALIBRATED.
     "hybrid_vae_raw": hybrid_vae_generator,
 }
 
@@ -55,9 +55,9 @@ def generate_population(source_df, config, scaler, n_samples=None, quiet=False):
     prev_level = gen_log.level
     if quiet:
         gen_log.setLevel(logging.WARNING)
-    # Shared hybrid kwargs (calibrate_marginals passed per-call below so the
-    # uncalibrated ablation can toggle only that one flag).
-    hybrid_kwargs = dict(
+    # calibrate_marginals is passed per-call below so the uncalibrated ablation
+    # can toggle only that one flag.
+    pi_vae_kwargs = dict(
         latent_dim=config.LATENT_DIM, epochs=config.VAE_EPOCHS, beta=config.VAE_BETA,
         n_samples=n_samples, scaler=scaler,
         use_minibatch=config.VAE_USE_MINIBATCH, batch_size=config.VAE_BATCH_SIZE,
@@ -67,22 +67,16 @@ def generate_population(source_df, config, scaler, n_samples=None, quiet=False):
         patience=config.VAE_PATIENCE, hidden_dim=config.VAE_HIDDEN_DIM,
         dropout=config.VAE_DROPOUT, free_bits=config.VAE_FREE_BITS,
     )
-    # Report the uncalibrated hybrid alongside the calibrated one only in the
-    # main (verbose) run, and only when calibration is actually on. Seed both
-    # hybrid trainings identically so the two rows differ *only* by the
-    # calibration post-step — a clean ablation of the KS-vs-correlation trade.
+    # The uncalibrated PI-VAE is reported alongside the calibrated one only in
+    # the main (verbose) run, and only when calibration is on.
     report_raw = (
         config.VAE_CALIBRATE_MARGINALS
         and getattr(config, "VAE_REPORT_UNCALIBRATED", False)
         and not quiet
     )
-    # Seed every engine from the SAME clean RNG state so each engine's output is
-    # independent of the order engines happen to run in. Previously the torch-based
-    # VAE ran before the hybrid and consumed the RNG stream first, giving the hybrid
-    # a different, order-dependent initialization — a non-reproducible artifact that
-    # made the same model score differently depending on what ran before it. Seeding
-    # both numpy (physics-MC, regression) and torch (VAE, hybrid) before each call
-    # makes the comparison order-invariant and every engine independently reproducible.
+    # Seed every engine from the same RNG state, for both numpy (physics-MC,
+    # regression) and torch (VAE, PI-VAE), so each engine's output is independent
+    # of the order the engines happen to run in.
     def _seed():
         np.random.seed(config.RANDOM_SEED)
         torch.manual_seed(config.RANDOM_SEED)
@@ -107,15 +101,15 @@ def generate_population(source_df, config, scaler, n_samples=None, quiet=False):
         _seed()
         out["hybrid_vae"] = hybrid_vae_generator.generate(
             vae_input, fx, config.CAUSAL_GRAPH,
-            calibrate_marginals=config.VAE_CALIBRATE_MARGINALS, **hybrid_kwargs,
+            calibrate_marginals=config.VAE_CALIBRATE_MARGINALS, **pi_vae_kwargs,
         )
         if report_raw:
-            # Same seed as the calibrated hybrid above, so the two differ ONLY by
-            # the calibration post-step — a clean calibration ablation.
+            # Same seed as the calibrated PI-VAE above, so the two rows differ
+            # only by the calibration post-step.
             _seed()
             out["hybrid_vae_raw"] = hybrid_vae_generator.generate(
                 vae_input, fx, config.CAUSAL_GRAPH,
-                calibrate_marginals=False, **hybrid_kwargs,
+                calibrate_marginals=False, **pi_vae_kwargs,
             )
     finally:
         gen_log.setLevel(prev_level)
@@ -230,7 +224,7 @@ def write_report(df, train_df, test_df, summary, ks_table, gap_df, std_table, en
 
     seen_modules = set()
     for key, (module, _) in engines.items():
-        if module in seen_modules:  # e.g. hybrid_vae_raw shares the hybrid module
+        if module in seen_modules:  # e.g. hybrid_vae_raw shares the PI-VAE module
             continue
         seen_modules.add(module)
         doc = inspect.getdoc(module.generate) or ""
@@ -490,7 +484,7 @@ def main():
     else:
         vae_scaler = StandardScaler().fit(train_df[config.FEATURES])
 
-    log.info("Generating synthetic populations (physics-MC, regression, VAE, hybrid VAE)...")
+    log.info("Generating synthetic populations (physics-MC, regression, VAE, PI-VAE)...")
     generated = generate_population(train_df, config, vae_scaler)
     for key, gen_df in generated.items():
         log.info("  %-30s generated %d rows", display_name(key), len(gen_df))
