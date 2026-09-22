@@ -1,0 +1,13 @@
+dataset,comparison,k,wilcoxon_p,vfp_better
+mango_composition,VFP vs Target-bootstrap,6,0.0,True
+mango_composition,VFP vs Target-bootstrap,10,0.0001,True
+mango_composition,VFP vs Target-bootstrap,16,0.2765,True
+mango_composition,VFP vs Pooled-bootstrap,6,0.0,True
+mango_composition,VFP vs Pooled-bootstrap,10,0.0,True
+mango_composition,VFP vs Pooled-bootstrap,16,0.0,True
+mango_composition,VFP vs Empirical-Bayes (Beta),6,0.0006,True
+mango_composition,VFP vs Empirical-Bayes (Beta),10,0.004,True
+mango_composition,VFP vs Empirical-Bayes (Beta),16,0.0022,True
+mango_composition,VFP vs Shrinkage MVN,6,0.0002,True
+mango_composition,VFP vs Shrinkage MVN,10,0.0001,True
+mango_composition,VFP vs Shrinkage MVN,16,0.0,True

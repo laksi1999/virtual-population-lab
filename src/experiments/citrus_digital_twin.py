@@ -218,6 +218,45 @@ def run():
     pc.to_csv(f"{OUT}/citrus_digital_twin_percondition.csv", index=False)
     print(f"\nwrote: {OUT}/citrus_digital_twin_percondition.csv (all thresholds)")
 
+    # (3) paired significance of the VFP improvement. The 12 storage conditions are
+    # the experimental unit, so we seed-average each condition's absolute error and
+    # test the VFP against the bootstrap and the single value with a paired Wilcoxon
+    # signed-rank test, reporting the mean error reduction with a 95% CI.
+    from scipy.stats import wilcoxon, t as tdist
+    def ci95(x):
+        x = np.asarray(x, float)
+        if len(x) < 2:
+            return float(x.mean()), float(x.mean())
+        se = x.std(ddof=1) / np.sqrt(len(x))
+        h = tdist.ppf(0.975, len(x) - 1) * se
+        return float(x.mean() - h), float(x.mean() + h)
+    print("\npaired significance on the 12 conditions (seed-averaged; VFP vs each baseline):")
+    sig = []
+    for thr in THRESHOLDS:
+        sub = allr[allr.thr == thr]
+        pc_err = (sub.groupby(["T", "Dur"])
+                  .agg(avg=("avg", "mean"), boot=("boot", "mean"), vfp=("vfp", "mean"))
+                  .reset_index())
+        v = pc_err["vfp"].values
+        for base_name, base_col in [("bootstrap", "boot"), ("single", "avg")]:
+            b = pc_err[base_col].values
+            diff = b - v  # positive = VFP better (lower error)
+            lo, hi = ci95(diff)
+            try:
+                _, p = wilcoxon(v, b)
+            except ValueError:
+                p = float("nan")
+            print(f"  thr {thr:>3}% vs {base_name:>9}: mean error reduction "
+                  f"{diff.mean():+.3f} (95% CI {lo:+.3f} to {hi:+.3f}), "
+                  f"Wilcoxon p={p:.4f}, n={len(v)}")
+            sig.append({"ci_threshold": thr, "comparison": f"VFP vs {base_name}",
+                        "mean_error_reduction": round(float(diff.mean()), 4),
+                        "ci95_low": round(lo, 4), "ci95_high": round(hi, 4),
+                        "wilcoxon_p": (round(float(p), 4) if p == p else None),
+                        "n": int(len(v))})
+    pd.DataFrame(sig).to_csv(f"{OUT}/citrus_digital_twin_significance.csv", index=False)
+    print(f"\nwrote: {OUT}/citrus_digital_twin_significance.csv")
+
 
 if __name__ == "__main__":
     run()

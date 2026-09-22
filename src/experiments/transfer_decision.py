@@ -40,10 +40,9 @@ from src.generators import mechanistic_cvae as cvae
 # (the VFP) over one that uses only the binary at-risk count per threshold (EB).
 CASES = {
     # Mango is the featured data-scarce cultivar transfer case (VFP wins at every k,
-    # significant vs all baselines). Grape (the other genuine cultivar-like grouping,
-    # across genotype) is a tie with empirical Bayes and is edged by a shrinkage
-    # hierarchical model, so it is acknowledged in the text rather than featured; apple
-    # (storage category) and tomato (varietal type) are not cultivar/region transfers.
+    # significant vs all baselines). Only mango is run here: apple (storage category)
+    # and tomato (varietal type) are not cultivar/region transfers, and grape's genotype
+    # grouping is not evaluated as a transfer decision in this feasibility study.
     "mango_composition": (["VitaminC", "TA", "SSC"], [0.4, 0.5, 0.6], [6, 10, 16]),
 }
 SEEDS = list(range(15))
@@ -167,6 +166,7 @@ def run(name):
     # paired significance: VFP vs each competitor, per k (Wilcoxon on run errors)
     from scipy.stats import wilcoxon
     print("\n  paired Wilcoxon p-values (VFP vs competitor; VFP lower = better):")
+    sig_records = []
     for m in ["tboot", "pboot", "eb", "smvn"]:
         line = f"  vs {names[m]:<22}"
         for k in ks:
@@ -175,7 +175,13 @@ def run(name):
                 p = wilcoxon(a, b).pvalue
                 better = "VFP" if a.mean() < b.mean() else m
                 line += f"k={k}: p={p:.3f}({better})  "
+                sig_records.append({"dataset": name, "comparison": f"VFP vs {names[m]}",
+                                    "k": k, "wilcoxon_p": round(float(p), 4),
+                                    "vfp_better": bool(a.mean() < b.mean())})
         print(line)
+    import pandas as _pd
+    _pd.DataFrame(sig_records).to_csv(f"{OUT}/transfer_decision_significance.csv", index=False)
+    print(f"  wrote: {OUT}/transfer_decision_significance.csv")
     return risk, ks, records
 
 
